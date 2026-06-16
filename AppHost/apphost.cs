@@ -15,6 +15,7 @@ var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj
     .WaitFor(storage)
     .WithArgs("--verbose", "--script-root", @"..\..\..")
     .WithHostStorage(storage)
+    .WithHttpHealthCheck("/api/health")
     .WithExternalHttpEndpoints();
 
 builder.Build().Run();
