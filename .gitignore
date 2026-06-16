@@ -482,3 +482,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Azure Functions localsettings file
+local.settings.json
+
+*.csproj.lscache

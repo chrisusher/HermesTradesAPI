@@ -1,6 +1,6 @@
 {
   "appHost": {
-    "path": "apphost.cs",
+    "path": "AppHost/apphost.cs",
     "language": "csharp"
   },
   "profiles": {
