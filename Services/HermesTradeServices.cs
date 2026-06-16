@@ -49,14 +49,20 @@ public static class HermesTradeServices
 
         #endregion
 
-        var functionsConfig = configuration.GetSection("Functions").Get<FunctionsConfig>() ?? new FunctionsConfig();
+        var functionsConfig = configuration
+            .GetSection("Functions")
+            .Get<FunctionsConfig>() ?? new FunctionsConfig();
+
+        var globalConfig = configuration
+            .GetSection("Global")
+            .Get<GlobalConfig>() ?? new GlobalConfig();
 
         services.AddDbContext<DatabaseContext>(options =>
         {
             options.UseCosmos(
                 configuration["Database:AccountName"]!,
                 configuration["Database:Key"]!,
-                configuration["Database:DatabaseName"]!
+                $"StockTraderAgent-{globalConfig.Environment}"
             );
 
             options.EnableSensitiveDataLogging();
@@ -73,11 +79,12 @@ public static class HermesTradeServices
 
         #region Config
         services.AddSingleton(functionsConfig!);
+        services.AddSingleton(globalConfig!);
         #endregion
 
         #region Repositories
 
-        // services.AddScoped<Repositories.MigrationsRepository>();
+        services.AddScoped<Repositories.MigrationsRepository>();
         // services.AddScoped<PortfolioRepository>();
         // services.AddScoped<StockRepository>();
         // services.AddScoped<StrategyRepository>();

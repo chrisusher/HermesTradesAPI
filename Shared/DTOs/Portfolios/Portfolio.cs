@@ -18,5 +18,5 @@ public class Portfolio : Entity
     public decimal? FreeCash { get; set; }
 
     [JsonPropertyName("userId")]
-    public Guid? UserId { get; set; }
+    public Guid UserId { get; set; }
 }

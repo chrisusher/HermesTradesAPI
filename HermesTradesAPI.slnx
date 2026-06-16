@@ -2,4 +2,5 @@
     <Project Path="Backend/Backend.csproj" />
     <Project Path="Services/Services.csproj" />
     <Project Path="Shared/Shared.csproj" />
+    <Project Path="CLI/CLI.csproj" />
 </Solution>

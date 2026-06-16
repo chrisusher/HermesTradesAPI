@@ -13,7 +13,7 @@ public class PortfolioTable : CosmosTable
 
     public Guid? BacktestId { get; set; }
 
-    public Guid? UserId { get; set; }
+    public Guid UserId { get; set; }
 
     public Portfolio ToPortfolioDto()
     {

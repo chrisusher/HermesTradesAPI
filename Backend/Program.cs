@@ -1,9 +1,11 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
 using Microsoft.Azure.Functions.Worker.Middleware;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Services;
 
 var host = new HostBuilder()
 	.ConfigureFunctionsWebApplication(app =>
@@ -11,6 +13,7 @@ var host = new HostBuilder()
 		app.Use(next => new FunctionExecutionDelegate(async context =>
 		{
 			var httpContext = context.GetHttpContext();
+
 			if (httpContext is not null)
 			{
 				httpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
@@ -28,7 +31,7 @@ var host = new HostBuilder()
 		}));
 	})
 	.ConfigureOpenApi()
-	.ConfigureServices(services =>
+	.ConfigureServices((context, services) =>
 	{
 		// Configure logging to suppress Azure Storage noise
 		services.Configure<LoggerFilterOptions>(options =>
@@ -42,8 +45,10 @@ var host = new HostBuilder()
 			options.AddFilter("Microsoft.Azure.WebJobs.Extensions.Storage", LogLevel.Error);
 		});
 
-		// Add HttpClient for Clerk token validation
 		services.AddHttpClient();
+
+		var configuration = context.Configuration;
+		services.AddHermesTradeServices(configuration);
 	})
 	.Build();
 
