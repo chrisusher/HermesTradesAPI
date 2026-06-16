@@ -1,7 +1,7 @@
-﻿#:sdk Aspire.AppHost.Sdk@13.3.0
-#:package Aspire.Hosting.Azure.CosmosDB@13.3.0
-#:package Aspire.Hosting.Azure.Functions@13.3.0
-#:package Aspire.Hosting.Azure.Storage@13.3.0
+﻿#:sdk Aspire.AppHost.Sdk@13.4.4
+#:package Aspire.Hosting.Azure.CosmosDB@13.4.4
+#:package Aspire.Hosting.Azure.Functions@13.4.4
+#:package Aspire.Hosting.Azure.Storage@13.4.4
 #:project ../Backend/Backend.csproj
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -10,6 +10,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var environment = builder.AddParameter("environment", "dev", true);
 var existingCosmosName = builder.AddParameter("cosmosName", "movemate-cosmos-db-82233", true);
 var existingCosmosResourceGroup = builder.AddParameter("cosmosResourceGroup", "Shared-Resources", true);
+var cosmosKey = builder.AddParameter("cosmosKey", true);
 #endregion
 
 var storage = builder.AddAzureStorage("storage")
@@ -34,6 +35,9 @@ var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj
     .WaitFor(database)
     .WaitFor(storage)
     .WithArgs("--verbose", "--script-root", @"..\..\..")
+    .WithEnvironment("Database__AccountName", existingCosmosName)
+    .WithEnvironment("Database__Key", cosmosKey)
+    .WithEnvironment("Global__Environment", environmentName)
     .WithHostStorage(storage)
     .WithHttpHealthCheck("/api/health")
     .WithExternalHttpEndpoints()
