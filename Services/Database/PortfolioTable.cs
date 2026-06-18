@@ -11,7 +11,7 @@ public class PortfolioTable : CosmosTable
 
     public decimal? StartingBalance { get; set; }
 
-    public Guid? BacktestId { get; set; }
+    public string StrategyId { get; set; } = string.Empty;
 
     public Guid UserId { get; set; }
 
@@ -20,13 +20,12 @@ public class PortfolioTable : CosmosTable
         return new Portfolio
         {
             PortfolioId = Id,
-            BacktestId = BacktestId,
-            StrategyId = PartitionKey,
+            UserId = Guid.Parse(PartitionKey),
             Created = Created,
             FreeCash = FreeCash,
             Status = Status,
+            StrategyId = StrategyId,
             Updated = Updated,
-            UserId = UserId,
         };
     }
 }

@@ -19,8 +19,6 @@ public class TransactionsTable : CosmosTable
 
     public decimal? QuantityRemaining { get; set; }
 
-    public string? ScreenerId { get; set; }
-
     public string? StrategyId { get; set; }
 
     /// <summary>
@@ -28,18 +26,13 @@ public class TransactionsTable : CosmosTable
     /// </summary>
     public Guid? StrategyVersionId { get; set; }
 
-    /// <summary>
-    /// Optional backtest identifier if this transaction was created during a backtest run.
-    /// </summary>
-    public Guid? BacktestId { get; set; }
-
     public OrderType Type { get; set; }
 
     public decimal TotalCost { get; set; }
 
     public DateTime? TransactionDate { get; set; }
 
-    public static TransactionsTable FromTransaction(TransactionObject transaction, string? strategyId, string? screenerId, Guid? strategyVersionId, Guid? backtestId = null)
+    public static TransactionsTable FromTransaction(TransactionObject transaction, string? strategyId, Guid? strategyVersionId)
     {
         return new TransactionsTable
         {
@@ -51,11 +44,9 @@ public class TransactionsTable : CosmosTable
             Price = transaction.Price,
             Quantity = transaction.Quantity,
             QuantityRemaining = transaction.Quantity,
-            ScreenerId = screenerId,
             StockId = transaction.StockId,
             StrategyId = strategyId,
             StrategyVersionId = strategyVersionId,
-            BacktestId = backtestId,
             Type = transaction.Type,
             TotalCost = transaction.TotalCost,
             TransactionDate = transaction.TransactionDate ?? transaction.Created,
@@ -78,7 +69,6 @@ public class TransactionsTable : CosmosTable
             Price = Price,
             Quantity = Quantity,
             QuantityRemaining = QuantityRemaining ?? Quantity,
-            ScreenerId = ScreenerId,
             StrategyId = StrategyId,
             TotalCost = TotalCost,
             TransactionDate = TransactionDate ?? Created,

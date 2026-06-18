@@ -60,6 +60,12 @@ public class DatabaseContext : DbContext
             .HasDiscriminator<string>("Discriminator")
             .HasValue<TransactionsTable>("TransactionTable");
 
+        modelBuilder.Entity<UserTable>()
+            .ToContainer("Users")
+            .HasPartitionKey(pk => pk.PartitionKey)
+            .HasDiscriminator<string>("Discriminator")
+            .HasValue<UserTable>("UserTable");
+
         // modelBuilder.Entity<PortfolioHistoryTable>()
         //     .ToContainer("PortfolioHistory")
         //     .HasPartitionKey(pk => pk.StrategyId)
@@ -80,4 +86,6 @@ public class DatabaseContext : DbContext
     public DbSet<StrategyVersionTable> StrategyVersions { get; set; }
 
     public DbSet<TransactionsTable> Transactions { get; set; }
+
+    public DbSet<UserTable> Users { get; set; }
 }

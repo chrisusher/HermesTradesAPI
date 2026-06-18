@@ -2,9 +2,6 @@ namespace Shared.DTOs.Portfolios;
 
 public class Portfolio : Entity
 {
-    [JsonPropertyName("backtestId")]
-    public Guid? BacktestId { get; set; }
-
     [JsonPropertyName("portfolioId")]
     public Guid PortfolioId { get; set; } = Guid.NewGuid();
 

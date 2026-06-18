@@ -4,7 +4,9 @@ using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Services.Azure;
+using Services.Clients;
 using Services.Database;
+using Services.Repositories;
 using Shared.Config;
 
 namespace Services;
@@ -45,6 +47,17 @@ public static class HermesTradeServices
 
         services.AddAzureClients(config =>
         {
+            var storageConnectionString = configuration.GetConnectionString("BlobStorage");
+
+            config.AddBlobServiceClient(storageConnectionString)
+                .WithName("TradeAPI");
+
+            // Add KeyVault
+            var keyVaultConfig = configuration
+                .GetSection("KeyVault")
+                .Get<KeyVaultConfig>();
+
+            config.AddSecretClient(new Uri($"https://{keyVaultConfig?.KeyVaultName}.vault.azure.net/"));
         });
 
         #endregion
@@ -73,7 +86,16 @@ public static class HermesTradeServices
 #endif
         });
 
+        services.AddTransient(services =>
+        {
+            var blobServiceClient = services.GetRequiredService<BlobServiceClient>();
+            return new BlobStorageService(blobServiceClient);
+        });
+
         #region Clients
+
+        services.AddHttpClient<FxRateClient>();
+        services.AddHttpClient<StockClient>();
 
         #endregion
 
@@ -84,12 +106,12 @@ public static class HermesTradeServices
 
         #region Repositories
 
-        services.AddScoped<Repositories.MigrationsRepository>();
-        // services.AddScoped<PortfolioRepository>();
-        // services.AddScoped<StockRepository>();
-        // services.AddScoped<StrategyRepository>();
-        // services.AddScoped<StrategyVersionRepository>();
-        // services.AddScoped<TransactionRepository>();
+        services.AddScoped<MigrationsRepository>();
+        services.AddScoped<PortfolioRepository>();
+        services.AddScoped<ReportRepository>();
+        services.AddScoped<StrategyRepository>();
+        services.AddScoped<StrategyVersionRepository>();
+        services.AddScoped<TransactionRepository>();
 
         // services.AddSingleton(sp =>
         // {
@@ -133,22 +155,12 @@ public static class HermesTradeServices
 
         #endregion
 
+        #region Clients
+
+        #endregion
+
         services.AddSingleton(s => services.BuildServiceProvider());
 
         return services;
-    }
-
-    /// <summary>
-    /// Helper method to centralise creation of BlobStorageService for a given client name.
-    /// </summary>
-    /// <param name="sp">The service provider.</param>
-    /// <param name="clientName">The Azure Blob client name.</param>
-    /// <returns>A configured BlobStorageService instance.</returns>
-    private static BlobStorageService CreateBlobStorageService(IServiceProvider sp, string clientName)
-    {
-        var clientFactory = sp.GetRequiredService<IAzureClientFactory<BlobServiceClient>>();
-
-        var blobClient = clientFactory.CreateClient(clientName);
-        return new BlobStorageService(blobClient);
     }
 }

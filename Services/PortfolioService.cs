@@ -1,0 +1,149 @@
+using Services.Clients;
+using Services.Repositories;
+using Shared.Data;
+using Shared.DTOs.Portfolios;
+using Shared.DTOs.Transactions;
+
+namespace Services;
+
+public class PortfolioService
+{
+    private readonly PortfolioRepository _portfolioRepository;
+    private readonly TransactionService _transactionService;
+    private readonly StockClient _stockClient;
+    private readonly ILogger<PortfolioService> _logger;
+
+    public PortfolioService(
+        PortfolioRepository portfolioRepository,
+        TransactionService transactionService,
+        StockClient stockClient,
+        ILoggerFactory loggerFactory)
+    {
+        _portfolioRepository = portfolioRepository;
+        _transactionService = transactionService;
+        _stockClient = stockClient;
+        _logger = loggerFactory.CreateLogger<PortfolioService>();
+    }
+
+    public async Task AddStockToPortfolioAsync(Guid userId, Guid portfolioId, PortfolioHolding stock, TransactionResponse response, string strategyId = "")
+    {
+        await _portfolioRepository.AddStockToPortfolioAsync(userId, portfolioId, stock, response, strategyId);
+    }
+    
+    public async Task<Portfolio> GetPortfolioAsync(Guid userId, Guid portfolioId)
+    {
+        return await _portfolioRepository.GetComposedPortfolioAsync(userId, portfolioId);
+    }
+
+    public async Task<IEnumerable<Portfolio>> GetPortfoliosAsync(Guid userId)
+    {
+        var portfolios = await _portfolioRepository.GetPortfoliosAsync(userId);
+
+        return portfolios.Select(p => p.ToPortfolioDto());
+    }
+
+    /// <summary>
+    /// Gets detailed holdings for a strategy, including average purchase prices and current values.
+    /// </summary>
+    /// <param name="strategyId">The strategy identifier</param>
+    /// <returns>List of portfolio holdings with average prices and current values</returns>
+    public async Task<List<PortfolioHolding>> GetStrategyHoldingsAsync(string strategyId, DateTime fromDate, DateTime toDate)
+    {
+        var holdings = new List<PortfolioHolding>();
+
+        try
+        {
+            // Get all buy transactions for this strategy
+            var transactions = await _transactionService.GetTransactionsByStrategyAsync(strategyId, fromDate, toDate);
+
+            var buyTransactions = transactions
+                .Where(t => StaticData.IsBuyOrder(t.Type))
+                .ToList();
+
+            if (buyTransactions.Count == 0)
+            {
+                return holdings;
+            }
+
+            // Group by stock and calculate holdings
+            var stockGroups = buyTransactions.GroupBy(t => t.StockId);
+
+            foreach (var stockGroup in stockGroups)
+            {
+                var stockId = stockGroup.Key;
+                var stockTransactions = stockGroup.ToList();
+
+                var sellTransactions = transactions
+                    .Except(buyTransactions)
+                    .Where(t => t.StockId == stockId)
+                    .ToList();
+
+                // Calculate total shares and weighted average price
+                // Sell transactions have negative quantity, so adding them subtracts from total
+                var totalShares = stockTransactions.Sum(t => t.Quantity) + sellTransactions.Sum(t => t.Quantity);
+                var totalInvested = stockTransactions.Sum(t => t.TotalCost);
+                var averagePrice = totalInvested / totalShares;
+
+                // Get stock details
+                var stock = await _stockClient.GetStockAsync(stockId);
+
+                if (stock == null)
+                {
+                    _logger.LogWarning("Stock with ID {StockId} not found when calculating holdings", stockId);
+                    continue;
+                }
+
+                // Get current price
+                decimal currentValue = 0;
+
+                try
+                {
+                    if (stock.PreviousClosePrice.HasValue)
+                    {
+                        currentValue = totalShares * stock.PreviousClosePrice.Value;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get current price for {Symbol}", stock.Symbol);
+                }
+
+                // Sell transactions have negative total cost, so negate to get positive proceeds
+                var soldAmount = -sellTransactions.Sum(t => t.TotalCost);
+
+                holdings.Add(new PortfolioHolding
+                {
+                    StockId = stock.StockId,
+                    AveragePurchasePrice = Math.Round(averagePrice, 2),
+                    AverageSalePrice = sellTransactions.Count > 0 ? Math.Round(sellTransactions.Average(t => t.Price), 2) : 0,
+                    CurrencyCode = stock.CurrencyCode,
+                    CurrentValue = Math.Round(currentValue, 2),
+                    ProfitLoss = Math.Round((currentValue + soldAmount) - totalInvested, 2),
+                    SaleAmount = soldAmount,
+                    TotalInvested = Math.Round(totalInvested, 2),
+                    TotalShares = totalShares,
+                    Symbol = stock.Symbol,
+                });
+            }
+
+            return holdings.OrderBy(h => h.Symbol).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating strategy holdings for {StrategyId}", strategyId);
+            return holdings;
+        }
+    }
+
+    public async Task UpdatePortfolioAsync(Portfolio portfolio)
+    {
+        // Prevent persisting negative FreeCash; clamp and log.
+        if (portfolio.FreeCash.HasValue && portfolio.FreeCash < 0)
+        {
+            _logger.LogWarning("Portfolio update for {StrategyId} attempted with negative FreeCash {FreeCash}. Clamping to 0.", portfolio.StrategyId, portfolio.FreeCash);
+            portfolio.FreeCash = 0m;
+        }
+
+        await _portfolioRepository.UpdateAsync(portfolio);
+    }
+}

@@ -1,6 +1,7 @@
 ﻿#:sdk Aspire.AppHost.Sdk@13.4.4
 #:package Aspire.Hosting.Azure.CosmosDB@13.4.4
 #:package Aspire.Hosting.Azure.Functions@13.4.4
+#:package Aspire.Hosting.Azure.KeyVault@13.4.5
 #:package Aspire.Hosting.Azure.Storage@13.4.4
 #:project ../Backend/Backend.csproj
 
@@ -13,13 +14,22 @@ var existingCosmosResourceGroup = builder.AddParameter("cosmosResourceGroup", "S
 var cosmosKey = builder.AddParameter("cosmosKey", true);
 #endregion
 
+var environmentName = builder.Configuration["environment"] ?? "dev";
+
 var storage = builder.AddAzureStorage("storage")
     .RunAsEmulator(azurite =>
     {
         azurite.WithDataVolume("data");
     });
 
-var environmentName = builder.Configuration["environment"] ?? "dev";
+var blobService = storage.AddBlobs("blobs");
+storage.AddBlobContainer("Report-Blobs", "reports");
+
+#region KeyVault
+
+var keyVault = builder.AddAzureKeyVault("KeyVault");
+
+#endregion
 
 #region CosmosDB
 
