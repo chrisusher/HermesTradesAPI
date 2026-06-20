@@ -22,7 +22,7 @@ public class TransactionRepository
     {
         await _portfolioRepository.GetPortfolioAsync(userId, portfolioId);
 
-        var transactionTable = TransactionsTable.FromTransaction(transaction, strategyId, strategyVersionId);
+        var transactionTable = TransactionsTable.FromTransaction(transaction, portfolioId, strategyId, strategyVersionId);
 
         _dbContext.Transactions.Add(transactionTable);
         await _dbContext.SaveChangesAsync();
@@ -60,7 +60,7 @@ public class TransactionRepository
 
         foreach (var transaction in transactionList)
         {
-            var table = TransactionsTable.FromTransaction(transaction, strategyId, strategyVersionId);
+            var table = TransactionsTable.FromTransaction(transaction, portfolioId, strategyId, strategyVersionId);
             transactionTables.Add(table);
             _dbContext.Transactions.Add(table);
         }
@@ -198,6 +198,17 @@ public class TransactionRepository
             .FirstOrDefaultAsync(t => t.Id == transactionId);
     }
 
+    public async Task<IEnumerable<TransactionsTable>> GetTransactionsByPortfolioIdAsync(Guid portfolioId, DateTime fromDate, DateTime toDate)
+    {
+        return await _dbContext.Transactions
+            .AsNoTracking()
+            .Where(t => t.PortfolioId == portfolioId
+                && t.TransactionDate >= fromDate
+                && t.TransactionDate <= toDate)
+            .OrderByDescending(t => t.TransactionDate)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<TransactionsTable>> GetTransactionsByStockIdAsync(Guid stockId)
     {
         return await _dbContext.Transactions
@@ -270,9 +281,9 @@ public class TransactionRepository
                 t.Type == orderType);
     }
 
-    public async Task UpdateTransactionAsync(string strategyId, TransactionObject transaction, Guid? strategyVersionId = null)
+    public async Task UpdateTransactionAsync(Guid portfolioId, string? strategyId, TransactionObject transaction, Guid? strategyVersionId = null)
     {
-        _dbContext.Transactions.Update(TransactionsTable.FromTransaction(transaction, strategyId, strategyVersionId));
+        _dbContext.Transactions.Update(TransactionsTable.FromTransaction(transaction, portfolioId, strategyId, strategyVersionId));
         await _dbContext.SaveChangesAsync();
     }
 

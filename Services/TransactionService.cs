@@ -220,6 +220,71 @@ public class TransactionService
         return await _stockClient.GetStocksAsync(stockIds);
     }
 
+    /// <summary>
+    /// Gets historical confirmed trades for a user and strategy
+    /// </summary>
+    public async Task<HistoricalTradesResponse> GetHistoricalTradesAsync(Guid userId, string strategyId, DateTime fromDate, DateTime? toDate = null)
+    {
+        _logger.LogDebug("Getting historical trades for user {UserId}, strategy {StrategyId}",
+            userId, strategyId);
+
+        toDate ??= DateTime.UtcNow;
+
+        var historicalTrades = await GetHistoricalTradesAsync(userId, fromDate, toDate);
+
+        if(historicalTrades is null)
+        {
+            _logger.LogWarning("No historical trades found for user {UserId}, strategy {StrategyId}", userId, strategyId);
+            
+            return new HistoricalTradesResponse
+            {
+                ConfirmedTrades = new List<TransactionResponse>(),
+                RealisedProfitLoss = 0m
+            };
+        }
+
+        var filteredTrades = historicalTrades.ConfirmedTrades
+            .Where(t => t.StrategyId == strategyId)
+            .ToList();
+
+        return new HistoricalTradesResponse
+        {
+            ConfirmedTrades = filteredTrades,
+            RealisedProfitLoss = CalculatedRealisedProfitLoss(filteredTrades)
+        };
+    }
+
+    public async Task<HistoricalTradesResponse> GetHistoricalTradesAsync(Guid userId, DateTime fromDate, DateTime? toDate)
+    {
+        toDate ??= DateTime.UtcNow;
+
+        _logger.LogDebug("Getting historical trades for user {UserId}, from {FromDate} to {ToDate}",
+            userId, fromDate, toDate);
+
+        var userPortfolios = await _portfolioRepository.GetPortfoliosAsync(userId);
+
+        var historicalTrades = new List<TransactionsTable>();
+
+        foreach(var portfolio in userPortfolios)
+        {
+            var trades = await _transactionRepository.GetTransactionsByPortfolioIdAsync(portfolio.Id, fromDate, toDate.Value);
+            historicalTrades.AddRange(trades);
+        }
+
+        var response = new HistoricalTradesResponse
+        {
+            ConfirmedTrades = historicalTrades
+                .Select(t => t.ToTransactionResponse())
+                .ToList()
+        };
+        response.RealisedProfitLoss = CalculatedRealisedProfitLoss(response.ConfirmedTrades);
+
+        _logger.LogInformation("Found {Count} historical trades for user {UserId}, from {FromDate} to {ToDate}",
+            response.ConfirmedTrades.Count, userId, fromDate, toDate);
+
+        return response;
+    }
+
     public async Task<TransactionResponse?> GetTransactionByIdAsync(Guid transactionId)
     {
         var transaction = await _transactionRepository.GetTransactionByIdAsync(transactionId);
@@ -460,6 +525,49 @@ public class TransactionService
         var profitLoss = (currentPricePerShare - originalPricePerShare) * quantity;
 
         return Math.Round(profitLoss, 2); // Round to 2 decimal places for currency
+    }
+
+    private static decimal CalculatedRealisedProfitLoss(List<TransactionResponse> confirmedTrades)
+    {
+        var profitLoss = 0m;
+
+        // Group trades by Stock Id
+        var tradesBySymbol = confirmedTrades
+            .GroupBy(t => t.StockId);
+
+        /*
+        * If there is at least one buy and one sell trade for the stock 
+        * with exactly same quantity for both bull and sell transactions, 
+        * we can calculate realised P/L
+        */
+
+        foreach (var tradeGroup in tradesBySymbol)
+        {
+            var buyTrades = tradeGroup
+                .Where(t => StaticData.IsBuyOrder(t.Type))
+                .OrderBy(t => t.TransactionDate)
+                .ToList();
+
+            var sellTrades = tradeGroup
+                .Where(t => !StaticData.IsBuyOrder(t.Type))
+                .OrderBy(t => t.TransactionDate)
+                .ToList();
+
+            var buyQuantity = buyTrades.Sum(t => t.Quantity);
+            var sellQuantity = sellTrades.Sum(t => t.Quantity);
+
+            if (buyQuantity != 0 && buyQuantity != -sellQuantity)
+            {
+                continue;
+            }
+
+            var totalBuyCost = buyTrades.Sum(t => t.TotalCostToUser);
+            var totalSellProceeds = sellTrades.Sum(t => t.TotalCostToUser);
+
+            var stockProfitLoss = totalSellProceeds + totalBuyCost;
+            profitLoss += stockProfitLoss;
+        }
+        return Math.Round(profitLoss);
     }
 
     /// <summary>

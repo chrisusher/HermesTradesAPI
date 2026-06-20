@@ -5,6 +5,9 @@ public class TransactionResponse : TransactionObject
     [JsonPropertyName("transactionId")]
     public Guid TransactionId { get; set; }
 
+    [JsonPropertyName("portfolioId")]
+    public Guid PortfolioId { get; set; }
+
     [JsonPropertyName("profitLoss")]
     public decimal? ProfitLoss { get; set; }
 

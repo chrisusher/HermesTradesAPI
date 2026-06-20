@@ -13,6 +13,8 @@ public class TransactionsTable : CosmosTable
 
     public CurrencyCode Currency { get; set; } = CurrencyCode.Unknown;
 
+    public Guid PortfolioId { get; set; }
+
     public decimal Price { get; set; }
 
     public decimal Quantity { get; set; }
@@ -32,7 +34,7 @@ public class TransactionsTable : CosmosTable
 
     public DateTime? TransactionDate { get; set; }
 
-    public static TransactionsTable FromTransaction(TransactionObject transaction, string? strategyId, Guid? strategyVersionId)
+    public static TransactionsTable FromTransaction(TransactionObject transaction, Guid portfolioId,string? strategyId, Guid? strategyVersionId)
     {
         return new TransactionsTable
         {
@@ -41,6 +43,7 @@ public class TransactionsTable : CosmosTable
             Currency = transaction.Currency,
             PartitionKey = transaction.StockId.ToString(),
             OriginalTransactionId = transaction.OriginalTransactionId,
+            PortfolioId = portfolioId,
             Price = transaction.Price,
             Quantity = transaction.Quantity,
             QuantityRemaining = transaction.Quantity,
@@ -66,6 +69,7 @@ public class TransactionsTable : CosmosTable
             TransactionId = Id,
             StockId = StockId,
             OriginalTransactionId = OriginalTransactionId,
+            PortfolioId = PortfolioId,
             Price = Price,
             Quantity = Quantity,
             QuantityRemaining = QuantityRemaining ?? Quantity,
@@ -80,6 +84,7 @@ public class TransactionsTable : CosmosTable
     {
         var response = ToTransactionResponse();
         response.Symbol = transaction.Symbol;
+        response.PortfolioId = PortfolioId;
         return response;
     }
 
@@ -87,6 +92,7 @@ public class TransactionsTable : CosmosTable
     {
         var response = ToTransactionResponse();
         response.Symbol = updateRequest.Symbol;
+        response.PortfolioId = PortfolioId;
         return response;
     }
 }
