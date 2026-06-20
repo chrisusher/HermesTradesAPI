@@ -23,7 +23,7 @@ var storage = builder.AddAzureStorage("storage")
     });
 
 var blobService = storage.AddBlobs("blobs");
-storage.AddBlobContainer("Report-Blobs", "reports");
+var reportContainer = storage.AddBlobContainer("Report-Blobs", "reports");
 
 #region KeyVault
 
@@ -51,6 +51,8 @@ var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj
     .WithHostStorage(storage)
     .WithHttpHealthCheck("/api/health")
     .WithExternalHttpEndpoints()
-    .WithReference(database);
+    .WithReference(database)
+    .WithReference(keyVault)
+    .WithReference(reportContainer);
 
 builder.Build().Run();

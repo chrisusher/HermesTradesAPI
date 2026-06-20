@@ -8,6 +8,7 @@ using Services.Clients;
 using Services.Database;
 using Services.Repositories;
 using Shared.Config;
+using Shared.Interfaces;
 
 namespace Services;
 
@@ -47,7 +48,7 @@ public static class HermesTradeServices
 
         services.AddAzureClients(config =>
         {
-            var storageConnectionString = configuration.GetConnectionString("BlobStorage");
+            var storageConnectionString = configuration.GetConnectionString(configuration["REPORT_BLOBS_CONNECTIONSTRING"] ?? throw new InvalidOperationException("REPORT_BLOBS_CONNECTIONSTRING is not set in configuration"));
 
             config.AddBlobServiceClient(storageConnectionString)
                 .WithName("TradeAPI");
@@ -57,7 +58,7 @@ public static class HermesTradeServices
                 .GetSection("KeyVault")
                 .Get<KeyVaultConfig>();
 
-            config.AddSecretClient(new Uri($"https://{keyVaultConfig?.KeyVaultName}.vault.azure.net/"));
+            config.AddSecretClient(new Uri(configuration["KEYVAULT_URI"] ?? throw new InvalidOperationException("KEYVAULT_URI is not set in configuration")));
         });
 
         #endregion
@@ -86,7 +87,7 @@ public static class HermesTradeServices
 #endif
         });
 
-        services.AddTransient(services =>
+        services.AddTransient<IStorageService>(services =>
         {
             var blobServiceClient = services.GetRequiredService<BlobServiceClient>();
             return new BlobStorageService(blobServiceClient);
@@ -113,43 +114,37 @@ public static class HermesTradeServices
         services.AddScoped<StrategyVersionRepository>();
         services.AddScoped<TransactionRepository>();
 
-        // services.AddSingleton(sp =>
-        // {
-        //     // ReportRepository needs Backend storage for reports container
-        //     var backendStorage = CreateBlobStorageService(sp, "Backend");
+        services.AddSingleton(sp =>
+        {
+            // ReportRepository needs Backend storage for reports container
+            var backendStorage = sp.GetRequiredService<IStorageService>();
 
-        //     var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-        //     return new ReportRepository(backendStorage, loggerFactory);
-        // });
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            return new ReportRepository(backendStorage, loggerFactory);
+        });
 
         #endregion
 
         #region Services
 
-        // Register IStorageService to use Backend storage (for Backend-specific containers)
-        // services.AddTransient<IStorageService>(sp =>
-        // {
-        //     var backendStorage = CreateBlobStorageService(sp, "Backend");
-        //     return backendStorage;
-        // });
-
-        // services.AddScoped<ReportService>();
+        services.AddScoped<ReportService>();
 
         #region EF Core Services
 
         services.AddScoped<MigrationsService>();
-        // services.AddScoped<PortfolioService>();
-        // services.AddScoped<StrategyService>();
-        // services.AddScoped<StrategyVersionService>();
-        // services.AddScoped<TransactionService>();
+        services.AddScoped<PortfolioService>();
+        services.AddScoped<StrategyService>();
+        services.AddScoped<StrategyVersionService>();
+        services.AddScoped<TransactionService>();
 
-        // services.AddScoped(sp =>
-        // {
-        //     // SettingsService needs Backend storage for settings container
-        //     var backendStorage = CreateBlobStorageService(sp, "Backend");
-        //     var logger = sp.GetRequiredService<ILoggerFactory>();
-        //     return new SettingsService(backendStorage, logger);
-        // });
+        services.AddScoped(sp =>
+        {
+            // SettingsService needs Backend storage for settings container
+            var backendStorage = sp.GetRequiredService<IStorageService>();
+
+            var logger = sp.GetRequiredService<ILoggerFactory>();
+            return new SettingsService(backendStorage, logger);
+        });
 
         #endregion
 
