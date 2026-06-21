@@ -11,5 +11,10 @@
             "enableDependencyTracking": true,
             "enablePerformanceCountersCollection": true
         }
+    },
+    "extensions": {
+        "http": {
+            "routePrefix": "api"
+        }
     }
 }

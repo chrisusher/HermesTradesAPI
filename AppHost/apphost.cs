@@ -9,7 +9,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 #region Parameters
 var environment = builder.AddParameter("environment", "dev", true);
-var existingCosmosName = builder.AddParameter("cosmosName", "movemate-cosmos-db-82233", true);
+var existingCosmosName = builder.AddParameter("cosmosName", true);
 var existingCosmosResourceGroup = builder.AddParameter("cosmosResourceGroup", "Shared-Resources", true);
 var cosmosKey = builder.AddParameter("cosmosKey", true);
 #endregion
@@ -44,7 +44,7 @@ var database = cosmos.AddCosmosDatabase("Database", $"StockTraderAgent-{environm
 var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj")
     .WaitFor(database)
     .WaitFor(storage)
-    .WithArgs("--verbose", "--script-root", @"..\..\..")
+    .WithArgs("", "--script-root", @"..\..\..")
     .WithEnvironment("Database__AccountName", existingCosmosName)
     .WithEnvironment("Database__Key", cosmosKey)
     .WithEnvironment("Global__Environment", environmentName)

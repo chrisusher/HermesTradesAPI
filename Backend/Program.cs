@@ -1,7 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
 using Microsoft.Azure.Functions.Worker.Middleware;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,15 +15,14 @@ var host = new HostBuilder()
 
 			if (httpContext is not null)
 			{
-				httpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
+				var origin = httpContext.Request.Headers.Origin.ToString();
+				var allowedOrigin = string.IsNullOrWhiteSpace(origin) ? "*" : origin;
+				var path = httpContext.Request.Path.Value ?? string.Empty;
+
+				httpContext.Response.Headers["Access-Control-Allow-Origin"] = allowedOrigin;
 				httpContext.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
 				httpContext.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
-
-				if (httpContext.Request.Method == "OPTIONS")
-				{
-					httpContext.Response.StatusCode = 200;
-					return;
-				}
+				httpContext.Response.Headers["Vary"] = "Origin";
 			}
 
 			await next(context);
