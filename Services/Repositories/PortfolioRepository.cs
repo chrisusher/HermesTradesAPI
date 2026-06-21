@@ -220,6 +220,7 @@ public class PortfolioRepository
         }
 
         var holdings = await _context.PortfolioHoldings
+            .WithPartitionKey(userId.ToString())
             .Where(h => h.PortfolioId == portfolioId)
             .ToListAsync();
 
