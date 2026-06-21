@@ -113,6 +113,7 @@ public static class HermesTradeServices
         services.AddScoped<StrategyRepository>();
         services.AddScoped<StrategyVersionRepository>();
         services.AddScoped<TransactionRepository>();
+        services.AddScoped<UserRepository>();
 
         services.AddSingleton(sp =>
         {
@@ -127,6 +128,8 @@ public static class HermesTradeServices
 
         #region Services
 
+        services.AddScoped<IApiKeyValidationService, ApiKeyValidationService>();
+        services.AddScoped<UserService>();
         services.AddScoped<ReportService>();
 
         #region EF Core Services

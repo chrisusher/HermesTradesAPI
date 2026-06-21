@@ -188,6 +188,50 @@ public class PortfolioRepository
         await _context.SaveChangesAsync();
     }
 
+    public async Task<Portfolio> CreateAsync(Guid userId, Portfolio portfolio)
+    {
+        var entity = new PortfolioTable
+        {
+            Id = portfolio.PortfolioId == Guid.Empty ? Guid.NewGuid() : portfolio.PortfolioId,
+            PartitionKey = userId.ToString(),
+            UserId = userId,
+            StrategyId = portfolio.StrategyId ?? string.Empty,
+            FreeCash = portfolio.FreeCash,
+            Created = DateTime.UtcNow,
+            Updated = DateTime.UtcNow,
+            Status = portfolio.Status,
+        };
+
+        _context.Portfolio.Add(entity);
+        await _context.SaveChangesAsync();
+
+        return entity.ToPortfolioDto();
+    }
+
+    public async Task DeleteAsync(Guid userId, Guid portfolioId)
+    {
+        var portfolio = await _context.Portfolio
+            .WithPartitionKey(userId.ToString())
+            .FirstOrDefaultAsync(x => x.Id == portfolioId);
+
+        if (portfolio is null)
+        {
+            throw new DataNotFoundException($"Portfolio {portfolioId} for user {userId} not found.");
+        }
+
+        var holdings = await _context.PortfolioHoldings
+            .Where(h => h.PortfolioId == portfolioId)
+            .ToListAsync();
+
+        if (holdings.Count > 0)
+        {
+            _context.PortfolioHoldings.RemoveRange(holdings);
+        }
+
+        _context.Portfolio.Remove(portfolio);
+        await _context.SaveChangesAsync();
+    }
+
     public async Task CreatePortfolioHistoryAsync(string strategyId)
     {
         var strategy = await _strategyRepository.GetStrategyAsync(strategyId);
