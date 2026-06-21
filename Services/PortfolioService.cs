@@ -29,6 +29,16 @@ public class PortfolioService
     {
         await _portfolioRepository.AddStockToPortfolioAsync(userId, portfolioId, stock, response, strategyId);
     }
+
+    public async Task<Portfolio> CreatePortfolioAsync(Guid userId, Portfolio portfolio)
+    {
+        return await _portfolioRepository.CreateAsync(userId, portfolio);
+    }
+
+    public async Task DeletePortfolioAsync(Guid userId, Guid portfolioId)
+    {
+        await _portfolioRepository.DeleteAsync(userId, portfolioId);
+    }
     
     public async Task<Portfolio> GetPortfolioAsync(Guid userId, Guid portfolioId)
     {
@@ -135,7 +145,7 @@ public class PortfolioService
         }
     }
 
-    public async Task UpdatePortfolioAsync(Portfolio portfolio)
+    public async Task<Portfolio> UpdatePortfolioAsync(Portfolio portfolio)
     {
         // Prevent persisting negative FreeCash; clamp and log.
         if (portfolio.FreeCash.HasValue && portfolio.FreeCash < 0)
@@ -144,6 +154,7 @@ public class PortfolioService
             portfolio.FreeCash = 0m;
         }
 
-        await _portfolioRepository.UpdateAsync(portfolio);
+        var updatedPortfolio = await _portfolioRepository.UpdateAsync(portfolio);
+        return updatedPortfolio.ToPortfolioDto();
     }
 }
