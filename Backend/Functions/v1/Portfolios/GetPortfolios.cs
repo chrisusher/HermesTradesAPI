@@ -54,10 +54,7 @@ public sealed class GetPortfolios : HttpFunction
             }
 
             var portfolios = await _portfolioService.GetPortfoliosAsync(parsedUserId);
-            return await CreateJsonResponseAsync(req, HttpStatusCode.OK, new 
-            { 
-                data = portfolios 
-            });
+            return await CreateJsonResponseAsync(req, HttpStatusCode.OK, portfolios);
         }
         catch (Exception ex)
         {

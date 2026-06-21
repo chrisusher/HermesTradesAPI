@@ -128,7 +128,7 @@ public static class HermesTradeServices
 
         #region Services
 
-        services.AddScoped<IApiKeyValidationService, ApiKeyValidationService>();
+        services.AddSingleton<IApiKeyValidationService, ApiKeyValidationService>();
         services.AddScoped<UserService>();
         services.AddScoped<ReportService>();
 

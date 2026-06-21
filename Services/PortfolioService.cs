@@ -145,7 +145,7 @@ public class PortfolioService
         }
     }
 
-    public async Task UpdatePortfolioAsync(Portfolio portfolio)
+    public async Task<Portfolio> UpdatePortfolioAsync(Portfolio portfolio)
     {
         // Prevent persisting negative FreeCash; clamp and log.
         if (portfolio.FreeCash.HasValue && portfolio.FreeCash < 0)
@@ -154,6 +154,7 @@ public class PortfolioService
             portfolio.FreeCash = 0m;
         }
 
-        await _portfolioRepository.UpdateAsync(portfolio);
+        var updatedPortfolio = await _portfolioRepository.UpdateAsync(portfolio);
+        return updatedPortfolio.ToPortfolioDto();
     }
 }

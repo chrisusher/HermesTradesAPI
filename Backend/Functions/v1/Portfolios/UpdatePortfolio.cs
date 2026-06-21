@@ -78,11 +78,8 @@ public sealed class UpdatePortfolio : HttpFunction
             portfolioRequest.UserId = parsedUserId;
             portfolioRequest.PortfolioId = parsedPortfolioId;
 
-            await _portfolioService.UpdatePortfolioAsync(portfolioRequest);
-            return await CreateJsonResponseAsync(req, HttpStatusCode.OK, new 
-            { 
-                data = portfolioRequest 
-            });
+            var updatedPortfolio = await _portfolioService.UpdatePortfolioAsync(portfolioRequest);
+            return await CreateJsonResponseAsync(req, HttpStatusCode.OK, updatedPortfolio);
         }
         catch (Exception ex)
         {

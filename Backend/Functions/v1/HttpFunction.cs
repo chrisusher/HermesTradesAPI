@@ -36,6 +36,12 @@ public abstract class HttpFunction
 
     protected static async Task<HttpResponseData> CreateJsonResponseAsync<T>(HttpRequestData req, HttpStatusCode statusCode, T body)
     {
+        if (statusCode == HttpStatusCode.NoContent || body is null)
+        {
+            var noContentResponse = req.CreateResponse(statusCode);
+            return noContentResponse;
+        }
+
         var response = req.CreateResponse(statusCode);
         response.Headers.Add("Content-Type", "application/json");
         await response.WriteStringAsync(JsonSerializer.Serialize(body, SharedCommon.JsonOptions));

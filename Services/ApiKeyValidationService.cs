@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Azure.Security.KeyVault.Secrets;
 using Shared.Interfaces;
 
@@ -20,9 +22,39 @@ public sealed class ApiKeyValidationService : IApiKeyValidationService
             return false;
         }
 
-        var secret = await _secretClient.GetSecretAsync(SecretName, cancellationToken: cancellationToken);
-        var expectedApiKey = secret.Value.Value;
+        try
+        {
+            var secret = await _secretClient.GetSecretAsync(SecretName, cancellationToken: cancellationToken);
+            var expectedApiKey = secret.Value.Value;
 
-        return string.Equals(providedApiKey, expectedApiKey, StringComparison.Ordinal);
+            if (string.IsNullOrWhiteSpace(expectedApiKey))
+            {
+                return false;
+            }
+
+            return ConstantTimeEquals(providedApiKey, expectedApiKey);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool ConstantTimeEquals(string? left, string? right)
+    {
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        var leftBytes = Encoding.UTF8.GetBytes(left);
+        var rightBytes = Encoding.UTF8.GetBytes(right);
+
+        if (leftBytes.Length != rightBytes.Length)
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
     }
 }

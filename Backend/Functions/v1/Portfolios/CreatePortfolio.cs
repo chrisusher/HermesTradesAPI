@@ -78,9 +78,8 @@ public sealed class CreatePortfolio : HttpFunction
             portfolioRequest.PortfolioId = portfolioRequest.PortfolioId == Guid.Empty ? Guid.NewGuid() : portfolioRequest.PortfolioId;
 
             var createdPortfolio = await _portfolioService.CreatePortfolioAsync(parsedUserId, portfolioRequest);
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            response.Headers.Add("Content-Type", "application/json");
-            await response.WriteStringAsync(JsonSerializer.Serialize(createdPortfolio, SharedCommon.JsonOptions));
+            
+            var response = await CreateJsonResponseAsync(req, HttpStatusCode.Created, createdPortfolio);
             return response;
         }
         catch (Exception ex)

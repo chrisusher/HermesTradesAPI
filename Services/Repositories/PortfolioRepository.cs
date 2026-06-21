@@ -378,7 +378,7 @@ public class PortfolioRepository
         return portfolio;
     }
 
-    public async Task UpdateAsync(Portfolio portfolio)
+    public async Task<PortfolioTable> UpdateAsync(Portfolio portfolio)
     {
         var portfolioEntity = await _context.Portfolio
             .WithPartitionKey(portfolio.UserId.ToString())
@@ -462,6 +462,7 @@ public class PortfolioRepository
 
         _context.Portfolio.Update(portfolioEntity);
         await _context.SaveChangesAsync();
+        return portfolioEntity;
     }
 
     public async Task UpdatePortfolioHoldingAsync(Guid userId, Guid portfolioId, PortfolioHolding stock, TransactionResponse response)
