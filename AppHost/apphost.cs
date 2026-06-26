@@ -8,6 +8,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 #region Parameters
+var apiKey = builder.AddParameter("apiKey", true);
 var environment = builder.AddParameter("environment", "dev", true);
 var existingCosmosName = builder.AddParameter("cosmosName", true);
 var existingCosmosResourceGroup = builder.AddParameter("cosmosResourceGroup", "Shared-Resources", true);
@@ -28,6 +29,8 @@ var reportContainer = storage.AddBlobContainer("Report-Blobs", "reports");
 #region KeyVault
 
 var keyVault = builder.AddAzureKeyVault("KeyVault");
+
+keyVault.AddSecret("API-KEY", apiKey);
 
 #endregion
 

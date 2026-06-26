@@ -1,0 +1,10 @@
+name: Dev
+variables:
+  - name: HOST
+    value: http://localhost
+  - name: PORT
+    value: "7287"
+  - secret: true
+    name: USER_ID
+  - secret: true
+    name: API_KEY
