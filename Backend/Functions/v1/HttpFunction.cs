@@ -18,7 +18,7 @@ public abstract class HttpFunction
         _apiKeyValidationService = apiKeyValidationService;
     }
 
-    protected async Task<bool> IsAuthorizedAsync(HttpRequestData req, CancellationToken cancellationToken)
+    protected async Task<bool> IsAuthorisedAsync(HttpRequestData req, CancellationToken cancellationToken)
     {
         var apiKey = GetApiKey(req);
         return await _apiKeyValidationService.IsValidApiKeyAsync(apiKey, cancellationToken);

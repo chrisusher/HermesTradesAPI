@@ -40,7 +40,7 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            if (!await IsAuthorizedAsync(req, req.FunctionContext.CancellationToken))
+            if (!await IsAuthorisedAsync(req, req.FunctionContext.CancellationToken))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.Unauthorized, new 
                 { 
