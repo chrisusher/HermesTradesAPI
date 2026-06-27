@@ -188,18 +188,21 @@ public class PortfolioRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Portfolio> CreateAsync(Guid userId, Portfolio portfolio)
+    public async Task<Portfolio> CreateAsync(Guid userId, CreatePortfolioRequest portfolio)
     {
         var entity = new PortfolioTable
         {
-            Id = portfolio.PortfolioId == Guid.Empty ? Guid.NewGuid() : portfolio.PortfolioId,
+            Id = Guid.NewGuid(),
             PartitionKey = userId.ToString(),
             UserId = userId,
+            Name = portfolio.Name,
+            AlwaysInvest = portfolio.AlwaysInvest,
+            Description = portfolio.Description,
             StrategyId = portfolio.StrategyId ?? string.Empty,
             FreeCash = portfolio.FreeCash,
             Created = DateTime.UtcNow,
             Updated = DateTime.UtcNow,
-            Status = portfolio.Status,
+            Status = StatusType.Active
         };
 
         _context.Portfolio.Add(entity);

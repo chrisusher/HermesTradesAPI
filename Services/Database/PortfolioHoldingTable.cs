@@ -58,7 +58,9 @@ public class PortfolioHoldingTable : CosmosTable
             StrategyId = StrategyId,
             TotalShares = Quantity,
             Transactions = Transactions
-                .Select(Guid.Parse)
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => Guid.TryParse(t, out var transactionId) ? transactionId : Guid.Empty)
+                .Where(transactionId => transactionId != Guid.Empty)
                 .ToList()
         };
     }

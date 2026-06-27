@@ -30,7 +30,7 @@ public class PortfolioService
         await _portfolioRepository.AddStockToPortfolioAsync(userId, portfolioId, stock, response, strategyId);
     }
 
-    public async Task<Portfolio> CreatePortfolioAsync(Guid userId, Portfolio portfolio)
+    public async Task<Portfolio> CreatePortfolioAsync(Guid userId, CreatePortfolioRequest portfolio)
     {
         return await _portfolioRepository.CreateAsync(userId, portfolio);
     }
