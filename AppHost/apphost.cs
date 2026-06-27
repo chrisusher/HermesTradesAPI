@@ -53,6 +53,8 @@ var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj
     .WithEnvironment("Database__AccountName", existingCosmosName)
     .WithEnvironment("Database__Key", cosmosKey)
     .WithEnvironment("Global__Environment", environment)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:18889")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
     .WithHostStorage(storage)
     .WithHttpHealthCheck("/api/health")
     .WithExternalHttpEndpoints()

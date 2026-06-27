@@ -4,6 +4,8 @@ using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Services;
 
 var host = new HostBuilder()
@@ -42,6 +44,18 @@ var host = new HostBuilder()
 			options.AddFilter("Microsoft.Azure.WebJobs.Host.Blobs", LogLevel.Error);
 			options.AddFilter("Microsoft.Azure.WebJobs.Extensions.Storage", LogLevel.Error);
 		});
+
+		services.AddOpenTelemetry()
+			.ConfigureResource(resource => resource.AddService("Backend"))
+			.WithTracing(tracing =>
+			{
+				tracing
+					.SetSampler(new AlwaysOnSampler())
+					.AddSource("Services.Clients.MarketDataClient")
+					.AddHttpClientInstrumentation();
+
+				tracing.AddOtlpExporter();
+			});
 
 		services.AddHttpClient();
 

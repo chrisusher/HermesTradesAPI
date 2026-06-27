@@ -49,6 +49,7 @@ public class PortfolioHoldingTable : CosmosTable
             Symbol = Symbol,
             ExchangeName = ExchangeName,
             StockId = StockId,
+            Created = Created,
             CurrencyCode = CurrencyCode,
             FirstPurchaseDate = FirstPurchaseDate,
             ProfitLoss = ProfitLoss,

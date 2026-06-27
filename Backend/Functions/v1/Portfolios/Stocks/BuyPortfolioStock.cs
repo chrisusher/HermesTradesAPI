@@ -98,6 +98,7 @@ public sealed class BuyPortfolioStock : HttpFunction
             }
 
             var stock = await _stockClient.GetStockAsync(buyRequest.Symbol, req.FunctionContext.CancellationToken);
+            
             if (stock is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.NotFound, new

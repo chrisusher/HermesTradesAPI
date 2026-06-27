@@ -10,17 +10,20 @@ public class PortfolioService
 {
     private readonly PortfolioRepository _portfolioRepository;
     private readonly TransactionService _transactionService;
+    private readonly CandleClient _candleClient;
     private readonly StockClient _stockClient;
     private readonly ILogger<PortfolioService> _logger;
 
     public PortfolioService(
         PortfolioRepository portfolioRepository,
         TransactionService transactionService,
+        CandleClient candleClient,
         StockClient stockClient,
         ILoggerFactory loggerFactory)
     {
         _portfolioRepository = portfolioRepository;
         _transactionService = transactionService;
+        _candleClient = candleClient;
         _stockClient = stockClient;
         _logger = loggerFactory.CreateLogger<PortfolioService>();
     }
@@ -42,7 +45,44 @@ public class PortfolioService
     
     public async Task<Portfolio> GetPortfolioAsync(Guid userId, Guid portfolioId)
     {
-        return await _portfolioRepository.GetComposedPortfolioAsync(userId, portfolioId);
+        var portfolio = await _portfolioRepository.GetComposedPortfolioAsync(userId, portfolioId);
+
+        for(var index = 0; index < portfolio.Stocks.Count; index++)
+        {
+            var holding = portfolio.Stocks[index];
+
+            var transactions = await _transactionService.GetTransactionsByIdsAsync(holding.Transactions);
+
+            var candleTask = _candleClient.GetCandlesAsync(holding.StockId, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddDays(-1));
+
+            var buyTransactions = transactions
+                .Where(t => StaticData.IsBuyOrder(t.Type))
+                .ToList();
+
+            var sellTransactions = transactions
+                .Except(buyTransactions)
+                .ToList();
+
+            portfolio.Stocks[index].AveragePurchasePrice = buyTransactions
+                .Average(t => t.Price);
+
+            if(sellTransactions.Count > 0)
+            {
+                portfolio.Stocks[index].AverageSalePrice = sellTransactions
+                    .Average(t => t.Price);
+            }
+
+            portfolio.Stocks[index].TotalInvested = buyTransactions
+                .Sum(t => t.TotalCost);
+
+            var candles = await candleTask;
+
+            if (candles.Count > 0)
+            {
+                portfolio.Stocks[index].CurrentValue = candles.Last().Close * holding.TotalShares;
+            }
+        }
+        return portfolio;
     }
 
     public async Task<IEnumerable<Portfolio>> GetPortfoliosAsync(Guid userId)

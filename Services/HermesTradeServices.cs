@@ -102,6 +102,7 @@ public static class HermesTradeServices
 
         #region Clients
 
+        services.AddHttpClient<CandleClient>();
         services.AddHttpClient<FxRateClient>();
         services.AddHttpClient<StockClient>();
 
