@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Azure.Functions.Worker.Http;
 using Services;
 using Shared;
+using Shared.DTOs.Users;
 using Shared.Interfaces;
 
 namespace Backend.Functions.v1;
@@ -16,6 +17,11 @@ public abstract class HttpFunction
     {
         _userService = userService;
         _apiKeyValidationService = apiKeyValidationService;
+    }
+
+    protected async Task<User?> GetUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        return await _userService.GetUserByIdAsync(userId, cancellationToken);
     }
 
     protected async Task<bool> IsAuthorisedAsync(HttpRequestData req, CancellationToken cancellationToken)
@@ -50,6 +56,6 @@ public abstract class HttpFunction
 
     protected async Task<bool> UserExistsAsync(HttpRequestData req, Guid userId)
     {
-        return await _userService.UserExistsAsync(userId, req.FunctionContext.CancellationToken);
+        return await _userService.ExistsAsync(userId, req.FunctionContext.CancellationToken);
     }
 }

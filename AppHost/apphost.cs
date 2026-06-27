@@ -10,6 +10,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 #region Parameters
     
 var apiKey = builder.AddParameter("apiKey", true);
+var marketDataApiKey = builder.AddParameter("marketDataApiKey", true);
 var environment = builder.AddParameter("environment", false);
 var existingCosmosName = builder.AddParameter("cosmosName", true);
 var existingCosmosResourceGroup = builder.AddParameter("cosmosResourceGroup", "Shared-Resources", true);
@@ -31,6 +32,7 @@ var reportContainer = storage.AddBlobContainer("Report-Blobs", "reports");
 var keyVault = builder.AddAzureKeyVault("KeyVault");
 
 keyVault.AddSecret("API-KEY", apiKey);
+keyVault.AddSecret("MARKET-DATA-FUNCTIONS-API-KEY", marketDataApiKey);
 
 #endregion
 

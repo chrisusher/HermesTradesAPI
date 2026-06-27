@@ -19,7 +19,7 @@ public class UserRepositoryTests
         var userId = ServiceTestsCommon.Config?.UserId ?? Guid.Empty; // Replace with an actual user ID in your test database
 
         // Act
-        var user = await _userRepository.UserExistsAsync(userId);
+        var user = await _userRepository.ExistsAsync(userId);
 
         // Assert
         Assert.That(user, Is.True, $"User with ID {userId} should exist in the database.");

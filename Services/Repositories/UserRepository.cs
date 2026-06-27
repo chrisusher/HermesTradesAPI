@@ -12,7 +12,14 @@ public class UserRepository
         _dbContext = dbContext;
     }
 
-    public async Task<bool> UserExistsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<UserTable?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var userIdString = userId.ToString();
+
+        return await _dbContext.Users.FirstOrDefaultAsync(x => x.PartitionKey == userIdString, cancellationToken);
+    }
+
+    public async Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var userIdString = userId.ToString();
 

@@ -173,6 +173,7 @@ public class PortfolioRepository
                     {
                         response.TransactionId.ToString()
                     },
+                    Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
 
@@ -188,7 +189,7 @@ public class PortfolioRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Portfolio> CreateAsync(Guid userId, CreatePortfolioRequest portfolio)
+    public async Task<Portfolio> CreateAsync(Guid userId, CreatePortfolioRequest portfolio, CurrencyCode defaultCurrency = CurrencyCode.USD)
     {
         var entity = new PortfolioTable
         {
@@ -197,6 +198,7 @@ public class PortfolioRepository
             UserId = userId,
             Name = portfolio.Name,
             AlwaysInvest = portfolio.AlwaysInvest,
+            Currency = portfolio.Currency ?? defaultCurrency,
             Description = portfolio.Description,
             StrategyId = portfolio.StrategyId ?? string.Empty,
             FreeCash = portfolio.FreeCash,
@@ -289,16 +291,10 @@ public class PortfolioRepository
         var portfolioEntity = await GetPortfolioAsync(userId, portfolioId);
         var holdings = await GetHoldingsAsync(portfolioEntity.Id);
 
-        return new Portfolio
-        {
-            PortfolioId = portfolioEntity.Id,
-            StrategyId = portfolioEntity.StrategyId,
-            FreeCash = portfolioEntity.FreeCash,
-            Created = portfolioEntity.Created,
-            Updated = portfolioEntity.Updated,
-            Status = portfolioEntity.Status,
-            Stocks = holdings.Select(h => h.ToPortfolioHolding()).ToList()
-        };
+        var portfolio = portfolioEntity.ToPortfolioDto();
+        portfolio.Stocks = holdings.Select(h => h.ToPortfolioHolding()).ToList();
+
+        return portfolio;
     }
     
 

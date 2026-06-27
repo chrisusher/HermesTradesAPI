@@ -14,6 +14,7 @@ public class TransactionService
     private readonly StockClient _stockClient;
     private readonly TransactionRepository _transactionRepository;
     private readonly FxRateClient _fxRateClient;
+    private readonly UserService _userService;
     private readonly ILogger<TransactionService> _logger;
 
     public TransactionService(
@@ -21,12 +22,14 @@ public class TransactionService
         StockClient stockClient,
         TransactionRepository transactionRepository,
         FxRateClient fxRateClient,
+        UserService userService,
         ILoggerFactory loggerFactory)
     {
         _portfolioRepository = portfolioRepository;
         _stockClient = stockClient;
         _transactionRepository = transactionRepository;
         _fxRateClient = fxRateClient;
+        _userService = userService;
         _logger = loggerFactory.CreateLogger<TransactionService>();
     }
 
@@ -71,6 +74,16 @@ public class TransactionService
             return response;
         }
 
+        var user = await _userService.GetUserByIdAsync(userId);
+
+        if (user is null)
+        {
+            _logger.LogError("User with ID {UserId} not found.", userId);
+            throw new DataNotFoundException($"User with ID {userId} not found.");
+        }
+
+        var totalCostToUser = await _fxRateClient.ConvertAsync(transaction.TotalCost, transaction.Currency, user.CurrencyCode, transaction.TransactionDate ?? DateTime.UtcNow);
+
         var transactionResponse = await _transactionRepository.AddTransactionAsync(new()
         {
             Created = transaction.Created,
@@ -81,6 +94,7 @@ public class TransactionService
             StockId = stock.StockId,
             Symbol = stock.Symbol,
             TotalCost = transaction.TotalCost,
+            TotalCostToUser = totalCostToUser,
             TransactionDate = transaction.TransactionDate ?? transaction.Created,
             Type = transaction.Type,
         }, portfolioId, userId, strategyId);
@@ -147,7 +161,7 @@ public class TransactionService
             portfolioEntries.Add((buy.Holding, response));
         }
 
-        await _portfolioRepository.AddStocksToPortfolioAsync(userId, portfolioId,  strategyId, portfolioEntries);
+        await _portfolioRepository.AddStocksToPortfolioAsync(userId, portfolioId, strategyId, portfolioEntries);
 
         return responses;
     }
@@ -232,10 +246,10 @@ public class TransactionService
 
         var historicalTrades = await GetHistoricalTradesAsync(userId, fromDate, toDate);
 
-        if(historicalTrades is null)
+        if (historicalTrades is null)
         {
             _logger.LogWarning("No historical trades found for user {UserId}, strategy {StrategyId}", userId, strategyId);
-            
+
             return new HistoricalTradesResponse
             {
                 ConfirmedTrades = new List<TransactionResponse>(),
@@ -265,7 +279,7 @@ public class TransactionService
 
         var historicalTrades = new List<TransactionsTable>();
 
-        foreach(var portfolio in userPortfolios)
+        foreach (var portfolio in userPortfolios)
         {
             var trades = await _transactionRepository.GetTransactionsByPortfolioIdAsync(portfolio.Id, fromDate, toDate.Value);
             historicalTrades.AddRange(trades);
@@ -361,6 +375,7 @@ public class TransactionService
         var totalCost = -Math.Abs(requestBody.TotalCost); // Ensure total cost is negative for sell
 
         Guid? originalTransactionId = requestBody.OriginalTransactionId;
+
         var transaction = new TransactionObject
         {
             Currency = stock.CurrencyCode,
@@ -415,6 +430,18 @@ public class TransactionService
             strategyId = originalTransaction.StrategyId;
         }
 
+        var user = await _userService.GetUserByIdAsync(userId);
+
+        if (user is null)
+        {
+            _logger.LogError("User with ID {UserId} not found.", userId);
+            throw new DataNotFoundException($"User with ID {userId} not found.");
+        }
+
+        var totalCostToUser = await _fxRateClient.ConvertAsync(transaction.TotalCost, transaction.Currency, user.CurrencyCode, transaction.TransactionDate ?? DateTime.UtcNow);
+
+        transaction.TotalCostToUser = totalCostToUser;
+
         var response = await _transactionRepository.AddTransactionAsync(transaction, portfolioId, userId, strategyId);
 
         transactionResponse = response.ToTransactionResponse(transaction);
@@ -461,7 +488,16 @@ public class TransactionService
 
         var quantity = -Math.Abs(transaction.Quantity); // Ensure quantity is negative for sell
         var totalCost = -Math.Abs(transaction.TotalCost); // Ensure total cost is negative for sell
-        var totalCostToUser = -Math.Abs(transaction.TotalCostToUser); // Ensure total cost to user is negative for sell
+
+        var user = await _userService.GetUserByIdAsync(userId);
+
+        if (user is null)
+        {
+            _logger.LogError("User with ID {UserId} not found.", userId);
+            throw new DataNotFoundException($"User with ID {userId} not found.");
+        }
+
+        var totalCostToUserConverted = await _fxRateClient.ConvertAsync(transaction.TotalCost, transaction.Currency, user.CurrencyCode, transaction.TransactionDate ?? DateTime.UtcNow);
 
         var response = await _transactionRepository.AddTransactionAsync(new()
         {
@@ -473,7 +509,7 @@ public class TransactionService
             StockId = stock.StockId,
             Symbol = stock.Symbol,
             TotalCost = totalCost,
-            TotalCostToUser = totalCostToUser,
+            TotalCostToUser = totalCostToUserConverted,
             TransactionDate = transaction.TransactionDate ?? DateTime.UtcNow,
             Type = transaction.Type,
         }, portfolioId, userId, strategyId);

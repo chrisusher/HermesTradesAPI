@@ -48,7 +48,9 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            if (!await UserExistsAsync(req, parsedUserId))
+            var user = await GetUserAsync(parsedUserId, req.FunctionContext.CancellationToken);
+
+            if (user is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.NotFound, new 
                 { 
@@ -76,7 +78,7 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            var createdPortfolio = await _portfolioService.CreatePortfolioAsync(parsedUserId, portfolioRequest);
+            var createdPortfolio = await _portfolioService.CreatePortfolioAsync(parsedUserId, portfolioRequest, user.CurrencyCode);
             
             var response = await CreateJsonResponseAsync(req, HttpStatusCode.Created, createdPortfolio);
             return response;

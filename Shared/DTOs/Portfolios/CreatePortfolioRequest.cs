@@ -8,6 +8,9 @@ public class CreatePortfolioRequest : Entity
     [JsonPropertyName("alwaysInvest")]
     public bool AlwaysInvest { get; set; }
 
+    [JsonPropertyName("currency")]
+    public CurrencyCode? Currency { get; set; }
+
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 

@@ -8,3 +8,5 @@ variables:
     name: USER_ID
   - secret: true
     name: API_KEY
+  - secret: true
+    name: PORTFOLIO_ID
