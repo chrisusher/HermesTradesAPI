@@ -1,0 +1,26 @@
+info:
+  name: Create Portfolio
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{HOST}}:{{PORT}}/api/v1/{{USER_ID}}/portfolios"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Bruno Test Portfolio",
+        "description": "Portfolio to test API works",
+        "freeCash": 10000
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -8,13 +8,15 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 #region Parameters
-var environment = builder.AddParameter("environment", "dev", true);
+    
+var apiKey = builder.AddParameter("apiKey", true);
+var marketDataApiKey = builder.AddParameter("marketDataApiKey", true);
+var environment = builder.AddParameter("environment", false);
 var existingCosmosName = builder.AddParameter("cosmosName", true);
 var existingCosmosResourceGroup = builder.AddParameter("cosmosResourceGroup", "Shared-Resources", true);
 var cosmosKey = builder.AddParameter("cosmosKey", true);
-#endregion
 
-var environmentName = builder.Configuration["environment"] ?? "dev";
+#endregion
 
 var storage = builder.AddAzureStorage("storage")
     .RunAsEmulator(azurite =>
@@ -29,17 +31,23 @@ var reportContainer = storage.AddBlobContainer("Report-Blobs", "reports");
 
 var keyVault = builder.AddAzureKeyVault("KeyVault");
 
+keyVault.AddSecret("API-KEY", apiKey);
+keyVault.AddSecret("MARKET-DATA-FUNCTIONS-API-KEY", marketDataApiKey);
+
 #endregion
 
 #region CosmosDB
 
-// Point to my existing Dev CosmosDB Account in Azure
+// Point to my existing Dev CosmosDB Account in Azure. Do not create a new database resource here.
 var cosmos = builder.AddAzureCosmosDB("CosmosDB")
     .AsExisting(existingCosmosName, existingCosmosResourceGroup);
 
-var database = cosmos.AddCosmosDatabase("Database", $"StockTraderAgent-{environmentName}");
+var database = cosmos.AddCosmosDatabase("Database", $"StockTraderAgent-{builder.Configuration["environment"]}");
     
 #endregion
+
+var dashboardOtlpEndpoint = builder.Configuration["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"];
+var otlpProtocol = string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"]) ? "grpc" : builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"];
 
 var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj")
     .WaitFor(database)
@@ -47,7 +55,9 @@ var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj
     .WithArgs("", "--script-root", @"..\..\..")
     .WithEnvironment("Database__AccountName", existingCosmosName)
     .WithEnvironment("Database__Key", cosmosKey)
-    .WithEnvironment("Global__Environment", environmentName)
+    .WithEnvironment("Global__Environment", environment)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", dashboardOtlpEndpoint)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", otlpProtocol)
     .WithHostStorage(storage)
     .WithHttpHealthCheck("/api/health")
     .WithExternalHttpEndpoints()

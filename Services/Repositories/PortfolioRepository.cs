@@ -173,6 +173,7 @@ public class PortfolioRepository
                     {
                         response.TransactionId.ToString()
                     },
+                    Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
 
@@ -188,18 +189,22 @@ public class PortfolioRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Portfolio> CreateAsync(Guid userId, Portfolio portfolio)
+    public async Task<Portfolio> CreateAsync(Guid userId, CreatePortfolioRequest portfolio, CurrencyCode defaultCurrency = CurrencyCode.USD)
     {
         var entity = new PortfolioTable
         {
-            Id = portfolio.PortfolioId == Guid.Empty ? Guid.NewGuid() : portfolio.PortfolioId,
+            Id = Guid.NewGuid(),
             PartitionKey = userId.ToString(),
             UserId = userId,
+            Name = portfolio.Name,
+            AlwaysInvest = portfolio.AlwaysInvest,
+            Currency = portfolio.Currency ?? defaultCurrency,
+            Description = portfolio.Description,
             StrategyId = portfolio.StrategyId ?? string.Empty,
             FreeCash = portfolio.FreeCash,
             Created = DateTime.UtcNow,
             Updated = DateTime.UtcNow,
-            Status = portfolio.Status,
+            Status = StatusType.Active
         };
 
         _context.Portfolio.Add(entity);
@@ -286,16 +291,10 @@ public class PortfolioRepository
         var portfolioEntity = await GetPortfolioAsync(userId, portfolioId);
         var holdings = await GetHoldingsAsync(portfolioEntity.Id);
 
-        return new Portfolio
-        {
-            PortfolioId = portfolioEntity.Id,
-            StrategyId = portfolioEntity.StrategyId,
-            FreeCash = portfolioEntity.FreeCash,
-            Created = portfolioEntity.Created,
-            Updated = portfolioEntity.Updated,
-            Status = portfolioEntity.Status,
-            Stocks = holdings.Select(h => h.ToPortfolioHolding()).ToList()
-        };
+        var portfolio = portfolioEntity.ToPortfolioDto();
+        portfolio.Stocks = holdings.Select(h => h.ToPortfolioHolding()).ToList();
+
+        return portfolio;
     }
     
 
@@ -377,6 +376,24 @@ public class PortfolioRepository
         }
 
         return portfolio;
+    }
+
+    public async Task<PortfolioHoldingTable> GetPortfolioHoldingAsync(Guid userId, Guid portfolioId, Guid stockId, CancellationToken cancellationToken)
+    {
+        var portfolio = await GetPortfolioAsync(userId, portfolioId);
+
+        var holding = await _context.PortfolioHoldings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.PartitionKey == portfolio.Id.ToString()
+                && x.StockId == stockId,
+                cancellationToken);
+
+        if (holding is null)
+        {
+            throw new DataNotFoundException($"Holding for stock {stockId} not found in portfolio {portfolioId}.");
+        }
+
+        return holding;
     }
 
     public async Task<PortfolioTable> UpdateAsync(Portfolio portfolio)

@@ -32,6 +32,8 @@ public class TransactionsTable : CosmosTable
 
     public decimal TotalCost { get; set; }
 
+    public decimal TotalCostToUser { get; set; }
+
     public DateTime? TransactionDate { get; set; }
 
     public static TransactionsTable FromTransaction(TransactionObject transaction, Guid portfolioId,string? strategyId, Guid? strategyVersionId)
@@ -52,6 +54,7 @@ public class TransactionsTable : CosmosTable
             StrategyVersionId = strategyVersionId,
             Type = transaction.Type,
             TotalCost = transaction.TotalCost,
+            TotalCostToUser = transaction.TotalCostToUser,
             TransactionDate = transaction.TransactionDate ?? transaction.Created,
         };
     }
@@ -75,6 +78,7 @@ public class TransactionsTable : CosmosTable
             QuantityRemaining = QuantityRemaining ?? Quantity,
             StrategyId = StrategyId,
             TotalCost = TotalCost,
+            TotalCostToUser = TotalCostToUser,
             TransactionDate = TransactionDate ?? Created,
             Type = Type,
         };

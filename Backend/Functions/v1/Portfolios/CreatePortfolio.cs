@@ -40,7 +40,7 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            if (!await IsAuthorizedAsync(req, req.FunctionContext.CancellationToken))
+            if (!await IsAuthorisedAsync(req, req.FunctionContext.CancellationToken))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.Unauthorized, new 
                 { 
@@ -48,7 +48,9 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            if (!await UserExistsAsync(req, parsedUserId))
+            var user = await GetUserAsync(parsedUserId, req.FunctionContext.CancellationToken);
+
+            if (user is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.NotFound, new 
                 { 
@@ -57,6 +59,7 @@ public sealed class CreatePortfolio : HttpFunction
             }
 
             var requestBody = await req.ReadAsStringAsync();
+
             if (string.IsNullOrWhiteSpace(requestBody))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new 
@@ -65,7 +68,8 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            var portfolioRequest = JsonSerializer.Deserialize<Portfolio>(requestBody, SharedCommon.JsonOptions);
+            var portfolioRequest = JsonSerializer.Deserialize<CreatePortfolioRequest>(requestBody, SharedCommon.JsonOptions);
+
             if (portfolioRequest is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new 
@@ -74,10 +78,7 @@ public sealed class CreatePortfolio : HttpFunction
                 });
             }
 
-            portfolioRequest.UserId = parsedUserId;
-            portfolioRequest.PortfolioId = portfolioRequest.PortfolioId == Guid.Empty ? Guid.NewGuid() : portfolioRequest.PortfolioId;
-
-            var createdPortfolio = await _portfolioService.CreatePortfolioAsync(parsedUserId, portfolioRequest);
+            var createdPortfolio = await _portfolioService.CreatePortfolioAsync(parsedUserId, portfolioRequest, user.CurrencyCode);
             
             var response = await CreateJsonResponseAsync(req, HttpStatusCode.Created, createdPortfolio);
             return response;

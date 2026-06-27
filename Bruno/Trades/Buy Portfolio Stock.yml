@@ -1,0 +1,29 @@
+info:
+  name: Buy Portfolio Stock
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{HOST}}:{{PORT}}/api/v1/{{USER_ID}}/portfolios/{{PORTFOLIO_ID}}/stocks/buy"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "date": "2026-06-26T00:00:00Z",
+        "symbol": "MSFT",
+        "price": 100.00,
+        "quantity": 1,
+        "totalCost": 100.00,
+        "type": "MARKET_BUY"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

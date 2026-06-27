@@ -487,3 +487,5 @@ $RECYCLE.BIN/
 local.settings.json
 
 *.csproj.lscache
+
+Temp/

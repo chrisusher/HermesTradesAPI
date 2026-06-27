@@ -6,24 +6,21 @@ using System.Net.Http.Headers;
 
 namespace Services.Clients;
 
-public class StockClient
+public class StockClient : MarketDataClient
 {
     private readonly HttpClient _httpClient;
-    private readonly SecretClient _secretClient;
     private readonly ILogger<StockClient> _logger;
     private readonly string _baseUrl;
-    private const string SECRET_NAME = "MARKET-DATA-FUNCTIONS-API-KEY";
 
     public StockClient(
         HttpClient httpClient,
         SecretClient secretClient,
         ILogger<StockClient> logger,
-        IConfiguration configuration)
+        IConfiguration configuration) : base(secretClient, configuration)
     {
         _httpClient = httpClient;
-        _secretClient = secretClient;
         _logger = logger;
-        _baseUrl = configuration["StockApi:BaseUrl"] ?? "https://market-data-functions.azurewebsites.net/api/v1/stocks";
+        _baseUrl = $"{BaseUrl}/v1/stocks";
     }
 
     public async Task<PortfolioStock?> GetStockAsync(string symbol, CancellationToken cancellationToken = default)
@@ -77,35 +74,37 @@ public class StockClient
 
     private async Task<PortfolioStock?> GetStockFromEndpointAsync(string endpoint, CancellationToken cancellationToken)
     {
+        using var activity = StartExternalActivity("market-data.stocks", endpoint);
         var apiKey = await GetApiKeyAsync(cancellationToken);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.Add("x-functions-key", apiKey);
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Stock API request failed with status {StatusCode}: {ErrorContent}", response.StatusCode, errorContent);
-            response.EnsureSuccessStatusCode();
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            CompleteExternalActivity(activity, response);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Stock API request failed with status {StatusCode}: {ErrorContent}", response.StatusCode, errorContent);
+                response.EnsureSuccessStatusCode();
+            }
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize<PortfolioStock>(content, SharedCommon.JsonOptions);
         }
-
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(content))
+        catch (Exception ex)
         {
-            return null;
+            CompleteExternalActivity(activity, exception: ex);
+            throw;
         }
-
-        return JsonSerializer.Deserialize<PortfolioStock>(content, SharedCommon.JsonOptions);
-    }
-
-    private async Task<string> GetApiKeyAsync(CancellationToken cancellationToken)
-    {
-        var secret = await _secretClient.GetSecretAsync(SECRET_NAME, cancellationToken: cancellationToken);
-
-        return secret.Value.Value ?? throw new InvalidOperationException($"The secret '{SECRET_NAME}' did not contain a value.");
     }
 }

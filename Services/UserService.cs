@@ -1,4 +1,5 @@
 using Services.Repositories;
+using Shared.DTOs.Users;
 
 namespace Services;
 
@@ -11,8 +12,15 @@ public sealed class UserService
         _userRepository = userRepository;
     }
 
-    public async Task<bool> UserExistsAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<User?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _userRepository.UserExistsAsync(userId, cancellationToken);
+        var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
+
+        return user?.ToUser();
+    }
+
+    public async Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _userRepository.ExistsAsync(userId, cancellationToken);
     }
 }

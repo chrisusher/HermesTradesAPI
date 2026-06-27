@@ -41,7 +41,7 @@ public sealed class UpdatePortfolio : HttpFunction
                 });
             }
 
-            if (!await IsAuthorizedAsync(req, req.FunctionContext.CancellationToken))
+            if (!await IsAuthorisedAsync(req, req.FunctionContext.CancellationToken))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.Unauthorized, new 
                 { 
