@@ -73,10 +73,17 @@ public static class HermesTradeServices
 
         services.AddDbContext<DatabaseContext>(options =>
         {
+            var accountEndpoint = NormaliseCosmosAccountEndpoint(configuration["Database:AccountName"] ?? configuration["Database__AccountName"] ?? string.Empty);
+            var accountKey = configuration["Database:Key"] ?? configuration["Database__Key"] ?? string.Empty;
+
+            var databaseName = ResolveCosmosDatabaseName(configuration, globalConfig.Environment);
+
+            Console.WriteLine($"[HermesTradeServices] Using Cosmos endpoint '{accountEndpoint}' and database '{databaseName}'.");
+
             options.UseCosmos(
-                configuration["Database:AccountName"]!,
-                configuration["Database:Key"]!,
-                $"StockTraderAgent-{globalConfig.Environment}"
+                accountEndpoint,
+                accountKey,
+                databaseName
             );
 
             options.EnableSensitiveDataLogging();
@@ -160,5 +167,40 @@ public static class HermesTradeServices
         services.AddSingleton(s => services.BuildServiceProvider());
 
         return services;
+    }
+
+    internal static string ResolveCosmosDatabaseName(IConfiguration configuration, string environment)
+    {
+        var configuredDatabaseName = configuration["Database:DatabaseName"] ?? configuration["Database__DatabaseName"];
+
+        if (!string.IsNullOrWhiteSpace(configuredDatabaseName))
+        {
+            return configuredDatabaseName;
+        }
+
+        return $"StockTraderAgent-{environment ?? "Development"}";
+    }
+
+    internal static string NormaliseCosmosAccountEndpoint(string? accountEndpoint)
+    {
+        if (string.IsNullOrWhiteSpace(accountEndpoint))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = accountEndpoint.Trim();
+
+        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed.TrimEnd('/') + "/";
+        }
+
+        if (trimmed.Contains("documents.azure.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"https://{trimmed.Trim('/')}";
+        }
+
+        return $"https://{trimmed.Trim('/')}.documents.azure.com:443/";
     }
 }

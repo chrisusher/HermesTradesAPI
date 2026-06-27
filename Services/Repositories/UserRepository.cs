@@ -14,6 +14,10 @@ public class UserRepository
 
     public async Task<bool> UserExistsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Users.AnyAsync(x => x.PartitionKey == userId.ToString(), cancellationToken);
+        var userIdString = userId.ToString();
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.PartitionKey == userIdString, cancellationToken);
+
+        return user != null;
     }
 }
