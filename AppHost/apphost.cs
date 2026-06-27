@@ -46,6 +46,9 @@ var database = cosmos.AddCosmosDatabase("Database", $"StockTraderAgent-{builder.
     
 #endregion
 
+var dashboardOtlpEndpoint = builder.Configuration["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"];
+var otlpProtocol = string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"]) ? "grpc" : builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"];
+
 var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj")
     .WaitFor(database)
     .WaitFor(storage)
@@ -53,8 +56,8 @@ var api = builder.AddAzureFunctionsProject("Backend", "../Backend/Backend.csproj
     .WithEnvironment("Database__AccountName", existingCosmosName)
     .WithEnvironment("Database__Key", cosmosKey)
     .WithEnvironment("Global__Environment", environment)
-    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:18889")
-    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", dashboardOtlpEndpoint)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_PROTOCOL", otlpProtocol)
     .WithHostStorage(storage)
     .WithHttpHealthCheck("/api/health")
     .WithExternalHttpEndpoints()

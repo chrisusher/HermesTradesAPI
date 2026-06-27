@@ -42,12 +42,12 @@ public class PortfolioService
     {
         await _portfolioRepository.DeleteAsync(userId, portfolioId);
     }
-    
+
     public async Task<Portfolio> GetPortfolioAsync(Guid userId, Guid portfolioId)
     {
         var portfolio = await _portfolioRepository.GetComposedPortfolioAsync(userId, portfolioId);
 
-        for(var index = 0; index < portfolio.Stocks.Count; index++)
+        for (var index = 0; index < portfolio.Stocks.Count; index++)
         {
             var holding = portfolio.Stocks[index];
 
@@ -66,7 +66,7 @@ public class PortfolioService
             portfolio.Stocks[index].AveragePurchasePrice = buyTransactions
                 .Average(t => t.Price);
 
-            if(sellTransactions.Count > 0)
+            if (sellTransactions.Count > 0)
             {
                 portfolio.Stocks[index].AverageSalePrice = sellTransactions
                     .Average(t => t.Price);
@@ -90,6 +90,18 @@ public class PortfolioService
         var portfolios = await _portfolioRepository.GetPortfoliosAsync(userId);
 
         return portfolios.Select(p => p.ToPortfolioDto());
+    }
+
+    public async Task<PortfolioHolding> GetPortfolioHoldingAsync(Guid userId, Guid portfolioId, Guid stockId, CancellationToken cancellationToken)
+    {
+        var holding = await _portfolioRepository.GetPortfolioHoldingAsync(userId, portfolioId, stockId, cancellationToken);
+
+        if (holding is null)
+        {
+            throw new DataNotFoundException($"Holding for stock {stockId} not found in portfolio {portfolioId} for user {userId}.");
+        }
+
+        return holding.ToPortfolioHolding();
     }
 
     /// <summary>
@@ -182,6 +194,19 @@ public class PortfolioService
         {
             _logger.LogError(ex, "Error calculating strategy holdings for {StrategyId}", strategyId);
             return holdings;
+        }
+    }
+
+    public async Task UpdateHoldingAsync(Guid userId, Guid portfolioId, TransactionResponse transaction, CancellationToken cancellationToken)
+    {
+        var holding = await GetPortfolioHoldingAsync(userId, portfolioId, transaction.StockId, cancellationToken);
+
+        await _portfolioRepository.UpdatePortfolioHoldingAsync(userId, portfolioId, holding, transaction);
+
+        // Update the current value based on the latest price
+        if (holding.PreviousClosePrice.HasValue)
+        {
+            holding.CurrentValue = holding.PreviousClosePrice.Value * holding.TotalShares;
         }
     }
 

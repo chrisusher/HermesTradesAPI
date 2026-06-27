@@ -13,15 +13,18 @@ namespace Backend.Functions.v1.Portfolios.Stocks;
 
 public sealed class SellPortfolioStock : HttpFunction
 {
+    private readonly PortfolioService _portfolioService;
     private readonly TransactionService _transactionService;
     private readonly ILogger<SellPortfolioStock> _logger;
 
     public SellPortfolioStock(
+        PortfolioService portfolioService,
         TransactionService transactionService,
         UserService userService,
         IApiKeyValidationService apiKeyValidationService,
         ILogger<SellPortfolioStock> logger) : base(userService, apiKeyValidationService)
     {
+        _portfolioService = portfolioService;
         _transactionService = transactionService;
         _logger = logger;
     }
@@ -59,6 +62,7 @@ public sealed class SellPortfolioStock : HttpFunction
             }
 
             var requestBody = await req.ReadAsStringAsync();
+
             if (string.IsNullOrWhiteSpace(requestBody))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -68,6 +72,7 @@ public sealed class SellPortfolioStock : HttpFunction
             }
 
             var sellRequest = JsonSerializer.Deserialize<SellTransactionRequestBody>(requestBody, SharedCommon.JsonOptions);
+
             if (sellRequest is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -93,6 +98,9 @@ public sealed class SellPortfolioStock : HttpFunction
             }
 
             var response = await _transactionService.SellStockAsync(parsedUserId, parsedPortfolioId, sellRequest);
+
+            await _portfolioService.UpdateHoldingAsync(parsedUserId, parsedPortfolioId, response, req.FunctionContext.CancellationToken);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.OK, response);
         }
         catch (DataNotFoundException ex)

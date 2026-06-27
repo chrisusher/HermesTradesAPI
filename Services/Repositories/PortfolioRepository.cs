@@ -378,6 +378,24 @@ public class PortfolioRepository
         return portfolio;
     }
 
+    public async Task<PortfolioHoldingTable> GetPortfolioHoldingAsync(Guid userId, Guid portfolioId, Guid stockId, CancellationToken cancellationToken)
+    {
+        var portfolio = await GetPortfolioAsync(userId, portfolioId);
+
+        var holding = await _context.PortfolioHoldings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.PartitionKey == portfolio.Id.ToString()
+                && x.StockId == stockId,
+                cancellationToken);
+
+        if (holding is null)
+        {
+            throw new DataNotFoundException($"Holding for stock {stockId} not found in portfolio {portfolioId}.");
+        }
+
+        return holding;
+    }
+
     public async Task<PortfolioTable> UpdateAsync(Portfolio portfolio)
     {
         var portfolioEntity = await _context.Portfolio

@@ -139,6 +139,7 @@ public sealed class BuyPortfolioStock : HttpFunction
             };
 
             var response = await _transactionService.BuyStockAsync(parsedUserId, parsedPortfolioId, holding, transaction);
+            
             if (response is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
