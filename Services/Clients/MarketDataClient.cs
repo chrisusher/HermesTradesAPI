@@ -70,6 +70,5 @@ public class MarketDataClient
         }
 
         activity.AddEvent(new ActivityEvent("market-data.response.received"));
-        activity.Dispose();
     }
 }

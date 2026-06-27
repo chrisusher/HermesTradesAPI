@@ -18,7 +18,7 @@ public class FxRateClient : MarketDataClient
     {
         _httpClient = httpClient;
         _logger = logger;
-        _baseUrl = $"{BaseUrl}/api/v1/currency";
+        _baseUrl = $"{BaseUrl}/v1/currency";
     }
 
     public async Task<decimal?> GetConversionRateAsync(CurrencyCode fromCurrency, CurrencyCode toCurrency, CancellationToken cancellationToken = default)

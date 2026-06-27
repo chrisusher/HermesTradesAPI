@@ -13,7 +13,7 @@ public class UserRepositoryTests
     }
 
     [Test]
-    public async Task GetUserByIdAsync_ShouldReturnUser_WhenUserExists()
+    public async Task ExistsAsync_ShouldReturnUser_WhenUserExists()
     {
         // Arrange
         var userId = ServiceTestsCommon.Config?.UserId ?? Guid.Empty; // Replace with an actual user ID in your test database
