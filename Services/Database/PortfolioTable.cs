@@ -11,6 +11,8 @@ public class PortfolioTable : CosmosTable
 
     public CurrencyCode Currency { get; set; }
 
+    public PortfolioType PortfolioType { get; set; } = PortfolioType.Live;
+
     public string? Description { get; set; }
 
     public decimal? FreeCash { get; set; }
@@ -33,6 +35,28 @@ public class PortfolioTable : CosmosTable
             Description = Description,
             Created = Created,
             FreeCash = FreeCash,
+            PortfolioType = PortfolioType,
+            StartingBalance = StartingBalance,
+            Status = Status,
+            StrategyId = StrategyId,
+            Updated = Updated,
+        };
+    }
+
+    public PortfolioSummary ToPortfolioSummaryDto()
+    {
+        return new PortfolioSummary
+        {
+            PortfolioId = Id,
+            UserId = Guid.Parse(PartitionKey),
+            Name = Name,
+            AlwaysInvest = AlwaysInvest,
+            Currency = Currency,
+            Description = Description,
+            Created = Created,
+            FreeCash = FreeCash,
+            PortfolioType = PortfolioType,
+            StartingBalance = StartingBalance,
             Status = Status,
             StrategyId = StrategyId,
             Updated = Updated,

@@ -56,8 +56,8 @@ public sealed class GetPortfolioStocks : HttpFunction
                 });
             }
 
-            var portfolio = await _portfolioService.GetPortfolioAsync(parsedUserId, parsedPortfolioId);
-            return await CreateJsonResponseAsync(req, HttpStatusCode.OK, portfolio.Stocks ?? new List<PortfolioHolding>());
+            var holdings = await _portfolioService.GetComposedPortfolioAsync(parsedUserId, parsedPortfolioId);
+            return await CreateJsonResponseAsync(req, HttpStatusCode.OK, holdings ?? new List<PortfolioHolding>());
         }
         catch (DataNotFoundException ex)
         {

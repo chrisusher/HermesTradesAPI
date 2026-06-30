@@ -43,46 +43,53 @@ public class PortfolioService
         await _portfolioRepository.DeleteAsync(userId, portfolioId);
     }
 
-    public async Task<Portfolio> GetPortfolioAsync(Guid userId, Guid portfolioId)
+    public async Task<List<PortfolioHolding>> GetComposedPortfolioAsync(Guid userId, Guid portfolioId)
     {
-        var portfolio = await _portfolioRepository.GetComposedPortfolioAsync(userId, portfolioId);
+        var portfolio = await GetPortfolioSummaryAsync(userId, portfolioId);
+
+        var holdings = new List<PortfolioHolding>();
 
         for (var index = 0; index < portfolio.Stocks.Count; index++)
         {
-            var holding = portfolio.Stocks[index];
-
-            var transactions = await _transactionService.GetTransactionsByIdsAsync(holding.Transactions);
-
-            var candleTask = _candleClient.GetCandlesAsync(holding.StockId, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddDays(-1));
-
-            var buyTransactions = transactions
-                .Where(t => StaticData.IsBuyOrder(t.Type))
-                .ToList();
-
-            var sellTransactions = transactions
-                .Except(buyTransactions)
-                .ToList();
-
-            portfolio.Stocks[index].AveragePurchasePrice = buyTransactions
-                .Average(t => t.Price);
-
-            if (sellTransactions.Count > 0)
-            {
-                portfolio.Stocks[index].AverageSalePrice = sellTransactions
-                    .Average(t => t.Price);
-            }
-
-            portfolio.Stocks[index].TotalInvested = buyTransactions
-                .Sum(t => t.TotalCost);
-
-            var candles = await candleTask;
-
-            if (candles.Count > 0)
-            {
-                portfolio.Stocks[index].CurrentValue = candles.Last().Close * holding.TotalShares;
-            }
+            holdings.Add(await GetHoldingDetailAsync(portfolio.Stocks[index], CancellationToken.None));
         }
-        return portfolio;
+
+        return holdings;
+    }
+
+    public async Task<List<PortfolioHoldingSummary>> GetHoldingSummariesAsync(Guid portfolioId)
+    {
+        var holdings = await _portfolioRepository.GetHoldingsAsync(portfolioId);
+
+        return holdings
+            .Select(h => h.ToPortfolioHoldingSummary())
+            .ToList();
+    }
+
+    public async Task<Portfolio> GetPortfolioAsync(Guid userId, Guid portfolioId)
+    {
+        var portfolio = await GetPortfolioSummaryAsync(userId, portfolioId);
+
+        var portfolioDto = Portfolio.FromPortfolioSummaryDto(portfolio);
+
+        portfolioDto.Stocks = await GetHoldingDetailsAsync(portfolio.Stocks, CancellationToken.None);
+        return portfolioDto;
+    }
+
+    public async Task<PortfolioSummary> GetPortfolioSummaryAsync(Guid userId, Guid portfolioId)
+    {
+        var portfolio = await _portfolioRepository.GetPortfolioAsync(userId, portfolioId);
+
+        if (portfolio is null)
+        {
+            throw new DataNotFoundException($"Portfolio {portfolioId} for user {userId} was not found.");
+        }
+
+        var portfolioDto = portfolio.ToPortfolioSummaryDto();
+
+        portfolioDto.Stocks = await GetHoldingSummariesAsync(portfolioId);
+
+        return portfolioDto;
     }
 
     public async Task<IEnumerable<Portfolio>> GetPortfoliosAsync(Guid userId)
@@ -101,7 +108,11 @@ public class PortfolioService
             throw new DataNotFoundException($"Holding for stock {stockId} not found in portfolio {portfolioId} for user {userId}.");
         }
 
-        return holding.ToPortfolioHolding();
+        var holdingDto = holding.ToPortfolioHolding();
+
+        holdingDto = await GetHoldingDetailAsync(holdingDto, cancellationToken);
+
+        return holdingDto;
     }
 
     /// <summary>
@@ -221,5 +232,109 @@ public class PortfolioService
 
         var updatedPortfolio = await _portfolioRepository.UpdateAsync(portfolio);
         return updatedPortfolio.ToPortfolioDto();
+    }
+
+    private async Task<List<PortfolioHolding>> GetHoldingDetailsAsync(List<PortfolioHoldingSummary> holdings, CancellationToken cancellationToken)
+    {
+        var detailedHoldings = new List<PortfolioHolding>();
+
+        foreach (var holding in holdings)
+        {
+            detailedHoldings.Add(await GetHoldingDetailAsync(holding, cancellationToken));
+        }
+
+        return detailedHoldings;
+    }
+
+    private async Task<PortfolioHolding> GetHoldingDetailAsync(PortfolioHoldingSummary holding, CancellationToken cancellationToken)
+    {
+        var transactions = await _transactionService.GetTransactionsByIdsAsync(holding.Transactions);
+
+        var candleTask = _candleClient.GetCandlesAsync(holding.StockId, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddDays(-1));
+
+        var portfolioHolding = PortfolioHolding.FromPortfolioHoldingSummary(holding);
+
+        var buyTransactions = transactions
+            .Where(t => StaticData.IsBuyOrder(t.Type))
+            .ToList();
+
+        var sellTransactions = transactions
+            .Except(buyTransactions)
+            .ToList();
+
+        var totalShares = buyTransactions.Sum(t => t.Quantity) + sellTransactions.Sum(t => t.Quantity);
+
+        portfolioHolding.AveragePurchasePrice = buyTransactions
+            .Average(t => t.Price);
+
+        portfolioHolding.FirstPurchaseDate = buyTransactions.Min(t => t.TransactionDate ?? t.Created);
+        portfolioHolding.TotalInvested = buyTransactions.Sum(t => t.TotalCost);
+        portfolioHolding.TotalShares = totalShares;
+
+        if (sellTransactions.Count > 0)
+        {
+            portfolioHolding.AverageSalePrice = sellTransactions
+                .Average(t => t.Price);
+
+            portfolioHolding.SaleAmount = -sellTransactions
+                .Sum(t => t.TotalCost);
+
+            portfolioHolding.ProfitLoss = (portfolioHolding.CurrentValue + portfolioHolding.SaleAmount) - portfolioHolding.TotalInvested;
+        }
+
+        var candles = await candleTask;
+
+        if (candles.Count > 0)
+        {
+            portfolioHolding.CurrentValue = candles.Last().Close * portfolioHolding.TotalShares;
+            portfolioHolding.PreviousClosePrice = candles.Last().Close;
+        }
+
+        return portfolioHolding;
+    }
+
+    private async Task<PortfolioHolding> GetHoldingDetailAsync(PortfolioHolding holding, CancellationToken cancellationToken)
+    {
+        var transactions = await _transactionService.GetTransactionsByIdsAsync(holding.Transactions);
+
+        var candleTask = _candleClient.GetCandlesAsync(holding.StockId, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddDays(-1));
+
+        var buyTransactions = transactions
+            .Where(t => StaticData.IsBuyOrder(t.Type))
+            .ToList();
+
+        var sellTransactions = transactions
+            .Except(buyTransactions)
+            .ToList();
+
+        var totalShares = buyTransactions.Sum(t => t.Quantity) + sellTransactions.Sum(t => t.Quantity);
+
+        holding.AveragePurchasePrice = buyTransactions
+            .Average(t => t.Price);
+
+        holding.FirstPurchaseDate = buyTransactions.Min(t => t.TransactionDate ?? t.Created);
+        holding.TotalInvested = buyTransactions.Sum(t => t.TotalCost);
+        holding.TotalShares = totalShares;
+
+        if (sellTransactions.Count > 0)
+        {
+            holding.AverageSalePrice = sellTransactions
+                .Average(t => t.Price);
+
+            holding.SaleAmount = -sellTransactions
+                .Sum(t => t.TotalCost);
+
+            holding.ProfitLoss = (holding.CurrentValue + holding.SaleAmount) - holding.TotalInvested;
+        }
+
+        var candles = await candleTask;
+
+        if (candles.Count > 0)
+        {
+            holding.CurrentValue = candles.Last().Close * holding.TotalShares;
+            holding.PreviousClosePrice = candles.Last().Close;
+        }
+
+        return holding;
     }
 }

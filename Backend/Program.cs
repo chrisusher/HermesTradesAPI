@@ -1,5 +1,4 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,7 +29,7 @@ var host = new HostBuilder()
 			await next(context);
 		}));
 	})
-	.ConfigureOpenApi()
+	// .ConfigureOpenApi()
 	.ConfigureServices((context, services) =>
 	{
 		// Configure logging to suppress Azure Storage noise
