@@ -72,6 +72,7 @@ public class PortfolioHolding : PortfolioHoldingSummary
     {
         return new PortfolioHolding
         {
+            PortfolioId = summary.PortfolioId,
             StockId = summary.StockId,
             ExchangeName = summary.ExchangeName,
             Symbol = summary.Symbol,

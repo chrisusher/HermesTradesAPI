@@ -268,8 +268,18 @@ public class PortfolioService
             .Average(t => t.Price);
 
         portfolioHolding.FirstPurchaseDate = buyTransactions.Min(t => t.TransactionDate ?? t.Created);
+
         portfolioHolding.TotalInvested = buyTransactions.Sum(t => t.TotalCost);
         portfolioHolding.TotalShares = totalShares;
+
+        if (totalShares <= 0)
+        {
+            portfolioHolding.StockStatus = PortfolioStockStatus.FullySold;
+        }
+
+        portfolioHolding.Transactions = transactions
+            .Select(t => t.TransactionId)
+            .ToList();
 
         if (sellTransactions.Count > 0)
         {
