@@ -15,7 +15,9 @@ http:
       {
         "name": "Bruno Test Portfolio",
         "description": "Portfolio to test API works",
-        "freeCash": 10000
+        "freeCash": 10000,
+        "portfolioType": "Live",
+        "currency": "GBP"
       }
   auth: inherit
 

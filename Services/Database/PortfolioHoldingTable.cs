@@ -65,4 +65,25 @@ public class PortfolioHoldingTable : CosmosTable
                 .ToList()
         };
     }
+
+    public PortfolioHoldingSummary ToPortfolioHoldingSummary()
+    {
+        return new PortfolioHoldingSummary
+        {
+            PortfolioId = PortfolioId,
+            Symbol = Symbol,
+            ExchangeName = ExchangeName,
+            StockId = StockId,
+            Created = Created,
+            CurrencyCode = CurrencyCode,
+            Source = Source,
+            StockStatus = StockStatus,
+            StrategyId = StrategyId,
+            Transactions = Transactions
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => Guid.TryParse(t, out var transactionId) ? transactionId : Guid.Empty)
+                .Where(transactionId => transactionId != Guid.Empty)
+                .ToList()
+        };
+    }
 }

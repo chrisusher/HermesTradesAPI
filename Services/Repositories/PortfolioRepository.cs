@@ -200,8 +200,10 @@ public class PortfolioRepository
             AlwaysInvest = portfolio.AlwaysInvest,
             Currency = portfolio.Currency ?? defaultCurrency,
             Description = portfolio.Description,
-            StrategyId = portfolio.StrategyId ?? string.Empty,
             FreeCash = portfolio.FreeCash,
+            PortfolioType = portfolio.PortfolioType,
+            StartingBalance = portfolio.FreeCash,
+            StrategyId = portfolio.StrategyId ?? string.Empty,
             Created = DateTime.UtcNow,
             Updated = DateTime.UtcNow,
             Status = StatusType.Active
@@ -282,22 +284,7 @@ public class PortfolioRepository
             .WithPartitionKey(userId.ToString())
             .ToListAsync();
     }
-
-    /// <summary>
-    /// Builds a domain Portfolio object composing holdings from separate documents.
-    /// </summary>
-    public async Task<Portfolio> GetComposedPortfolioAsync(Guid userId, Guid portfolioId)
-    {
-        var portfolioEntity = await GetPortfolioAsync(userId, portfolioId);
-        var holdings = await GetHoldingsAsync(portfolioEntity.Id);
-
-        var portfolio = portfolioEntity.ToPortfolioDto();
-        portfolio.Stocks = holdings.Select(h => h.ToPortfolioHolding()).ToList();
-
-        return portfolio;
-    }
     
-
     public async Task<PortfolioHistoryTable?> GetHistoryAsync(string strategyId)
     {
         return await _context.PortfolioHistory

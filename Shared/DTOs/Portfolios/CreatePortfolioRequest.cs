@@ -8,6 +8,9 @@ public class CreatePortfolioRequest : Entity
     [JsonPropertyName("alwaysInvest")]
     public bool AlwaysInvest { get; set; }
 
+    [JsonPropertyName("portfolioType")]
+    public PortfolioType PortfolioType { get; set; } = PortfolioType.Live;
+
     [JsonPropertyName("currency")]
     public CurrencyCode? Currency { get; set; }
 
