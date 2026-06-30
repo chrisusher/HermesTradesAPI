@@ -29,7 +29,6 @@ var host = new HostBuilder()
 			await next(context);
 		}));
 	})
-	// .ConfigureOpenApi()
 	.ConfigureServices((context, services) =>
 	{
 		// Configure logging to suppress Azure Storage noise
