@@ -250,7 +250,7 @@ public class PortfolioService
     {
         var transactions = await _transactionService.GetTransactionsByIdsAsync(holding.Transactions);
 
-        var candleTask = _candleClient.GetCandlesAsync(holding.StockId, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddDays(-1));
+        var candleTask = _candleClient.GetCandlesAsync(holding.StockId, DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddDays(-1), cancellationToken);
 
         var portfolioHolding = PortfolioHolding.FromPortfolioHoldingSummary(holding);
 
@@ -281,6 +281,14 @@ public class PortfolioService
             .Select(t => t.TransactionId)
             .ToList();
 
+        var candles = await candleTask;
+
+        if (candles.Count > 0)
+        {
+            portfolioHolding.CurrentValue = candles.Last().Close * portfolioHolding.TotalShares;
+            portfolioHolding.PreviousClosePrice = candles.Last().Close;
+        }
+
         if (sellTransactions.Count > 0)
         {
             portfolioHolding.AverageSalePrice = sellTransactions
@@ -290,14 +298,6 @@ public class PortfolioService
                 .Sum(t => t.TotalCost);
 
             portfolioHolding.ProfitLoss = (portfolioHolding.CurrentValue + portfolioHolding.SaleAmount) - portfolioHolding.TotalInvested;
-        }
-
-        var candles = await candleTask;
-
-        if (candles.Count > 0)
-        {
-            portfolioHolding.CurrentValue = candles.Last().Close * portfolioHolding.TotalShares;
-            portfolioHolding.PreviousClosePrice = candles.Last().Close;
         }
 
         return portfolioHolding;
