@@ -1,0 +1,35 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "extensions": {
+        "recommendations": [
+            "ms-azuretools.vscode-azurefunctions",
+            "ms-dotnettools.csharp",
+            "microsoft-aspire.aspire-vscode",
+            "ms-dotnettools.csdevkit"
+        ]
+    },
+    "settings": {
+        "azureFunctions.deploySubpath": "Backend/bin/Release/net10.0/publish",
+        "azureFunctions.preDeployTask": "publish Backend (functions)",
+        "azureFunctions.projectLanguage": "C#",
+        "azureFunctions.projectRuntime": "~4",
+        "chat.mcp.gallery.enabled": true,
+        "chat.viewSessions.enabled": true,
+        "chat.tools.terminal.autoApprove": {
+            "git rev-parse --show-toplevel": true,
+            "git status --short": true,
+            "git diff": true,
+            "dotnet --version": true,
+            "dotnet --info": true
+        },
+        "azureFunctions.projectRuntime": "~4",
+        "azureFunctions.projectLanguage": "C#",
+        "explorer.fileNesting.enabled": true,
+        "editor.wordWrap": "on",
+        "workbench.editor.wrapTabs": true
+    }
+}

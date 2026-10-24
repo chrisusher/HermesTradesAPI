@@ -388,7 +388,6 @@ FodyWeavers.xsd
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-*.code-workspace
 
 # Local History for Visual Studio Code
 .history/
@@ -489,3 +488,5 @@ local.settings.json
 *.csproj.lscache
 
 Temp/
+
+.azure/
