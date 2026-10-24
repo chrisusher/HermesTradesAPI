@@ -1,7 +1,11 @@
+@description('Resource group that contains the configured Cosmos DB account.')
+param cosmosResourceGroupName string = 'Shared-Resources'
+
 var environmentName = 'TEST'
 var location = resourceGroup().location
 
 var keyVaultName = 'agent-trading-${environmentName}-kv'
+var databaseName = 'agent-trading-${toLower(environmentName)}'
 
 module managedIdentity '../../Modules/managedIdentity.bicep' = {
   name: 'managed-identity'
@@ -47,14 +51,26 @@ resource keyVaultReference 'Microsoft.KeyVault/vaults@2023-02-01' existing = {
   name: keyVaultName
 }
 
+module cosmosDatabase '../../Modules/cosmosDatabase.bicep' = {
+  name: 'cosmos-database'
+  scope: resourceGroup(cosmosResourceGroupName)
+  params: {
+    cosmosAccountUrl: keyVaultReference.getSecret('CosmosUrl')
+    databaseName: databaseName
+  }
+}
+
 module functionApp '../../Modules/functionApp.bicep' = {
   name: 'functionApp'
   dependsOn: [
     keyVaultReference
+    cosmosDatabase
   ]
   params: {
     appInsightsName: logging.outputs.appInsightName
+    cosmosDatabase: databaseName
     cosmosKey: keyVaultReference.getSecret('CosmosKey')
+    cosmosUrl: keyVaultReference.getSecret('CosmosUrl')
     dataStorageAccountName: dataStorageAccount.outputs.storageAccountName
     environmentName: environmentName
     location: location

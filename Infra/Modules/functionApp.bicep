@@ -6,8 +6,13 @@ param location string = 'uksouth'
 @allowed(['TEST', 'TEMP', 'PROD'])
 param environmentName string
 
+param cosmosDatabase string
+
 @secure()
 param cosmosKey string
+
+@secure()
+param cosmosUrl string
 
 @description('The name of the data storage account')
 param dataStorageAccountName string
@@ -37,9 +42,6 @@ var storageAccountKeys = listKeys(resourceId('Microsoft.Storage/storageAccounts'
 var storageAccountKey = storageAccountKeys.keys[0].value
 
 var storageSuffix = environment().suffixes.storage
-
-var environmentNameLower = toLower(environmentName)
-var databaseName = 'tradestrategies-${environmentNameLower}'
 
 // Construct the connection string
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountKey};EndpointSuffix=${storageSuffix}'
@@ -122,28 +124,12 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: storageConnectionString
         }
         {
-          name: 'AzureWebJobs.SavePricesFunction.Disabled'
-          value: 'true'
-        }
-        {
-          name: 'AzureWebJobs.SaveStatsFunction.Disabled'
-          value: 'true'
-        }
-        {
-          name: 'AzureWebJobs.StopSellRolloverFunction.Disabled'
-          value: 'true'
-        }
-        {
-          name: 'ConnectionStrings__BackendStorage'
-          value: dataStorageConnectionString
-        }
-        {
           name: 'Aspire__Microsoft__EntityFrameworkCore__Cosmos__cosmosDbName__AccountEndpoint'
-          value: 'https://movemate-cosmos-db-82233.documents.azure.com:443/'
+          value: cosmosUrl
         }
         {
           name: 'Aspire__Microsoft__EntityFrameworkCore__Cosmos__cosmosDbName__DatabaseName'
-          value: databaseName
+          value: cosmosDatabase
         }
         {
           name: 'Database__Key'
@@ -158,44 +144,16 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: 'false'
         }
         {
-          name: 'Functions__Batches__PriceServiceBatchSize'
-          value: '10'
-        }
-        {
-          name: 'Functions__Batches__StatsServiceBatchSize'
-          value: '10'
-        }
-        {
-          name: 'Functions__SaveToBlobStorage'
-          value: 'true'
-        }
-        {
-          name: 'Functions__SendToServiceBus'
-          value: 'false'
-        }
-        {
-          name: 'Functions__UsePriceServiceForStats'
-          value: 'false'
-        }
-        {
           name: 'KeyVault__KeyVaultName'
           value: keyVaultName
         }
         {
-          name: 'MarketData__AccountName'
-          value: 'https://movemate-cosmos-db-82233.documents.azure.com:443/'
-        }
-        {
-          name: 'MarketData__DatabaseName'
-          value: 'stockdata'
-        }
-        {
-          name: 'MarketData__Key'
-          value: cosmosKey
-        }
-        {
           name: 'OpenApi__DocVersion'
           value: swaggerApiVersion
+        }
+        {
+          name: 'REPORT_BLOBS_CONNECTIONSTRING'
+          value: dataStorageConnectionString
         }
         {
           name: 'Swagger__ApiKey'
