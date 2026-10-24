@@ -63,6 +63,6 @@ module functionApp '../../Modules/functionApp.bicep' = {
     managedIdentityClientId: managedIdentity.outputs.managedIdentityClientId
     storageAccountName: functionsStorageAccount.outputs.storageAccountName
     swaggerApiKey: keyVaultReference.getSecret('SWAGGER-API-KEY')
-    swaggerApiVersion: '0.16.0'
+    swaggerApiVersion: '0.1.0'
   }
 }

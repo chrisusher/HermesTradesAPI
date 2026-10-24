@@ -2,7 +2,7 @@
 param location string = 'uksouth'
 
 @description('Prefix for the storage account name')
-param accountPrefix string = 'agenttradesfunc'
+param accountPrefix string = 'atfunc'
 
 @description('Random integer to ensure unique storage account name')
 var randomInteger = uniqueString(az.resourceGroup().id, '')

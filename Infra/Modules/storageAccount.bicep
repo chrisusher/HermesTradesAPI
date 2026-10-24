@@ -80,6 +80,9 @@ resource settingsBlobContainer 'Microsoft.Storage/storageAccounts/blobServices/c
 resource lifecycleManagement 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-01' = {
   name: 'default'
   parent: storageAccount
+  dependsOn: [
+    blobService
+  ]
   properties: {
     policy: {
       rules: [
