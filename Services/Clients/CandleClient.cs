@@ -1,6 +1,6 @@
 using Azure.Security.KeyVault.Secrets;
+using ChrisUsher.Core.Shared;
 using Microsoft.Extensions.Configuration;
-using Shared;
 using Shared.DTOs.Yahoo;
 using System.Net.Http.Headers;
 
