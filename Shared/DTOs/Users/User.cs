@@ -1,5 +1,3 @@
-using Shared.DTOs;
-
 namespace Shared.DTOs.Users;
 
 /// <summary>

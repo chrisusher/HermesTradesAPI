@@ -1,5 +1,4 @@
 using Shared.DTOs.Settings;
-using Shared.Interfaces;
 
 namespace Services;
 
@@ -42,6 +41,7 @@ public class SettingsService : IAsyncDisposable
             if (config is null)
             {
                 _logger.LogDebug("No feature flags configuration found, returning empty list for user {UserId}", userId);
+
                 return new List<FeatureFlag>();
             }
 
@@ -50,6 +50,7 @@ public class SettingsService : IAsyncDisposable
             if (userFlags is null)
             {
                 _logger.LogDebug("No feature flags found for user {UserId}, returning empty list", userId);
+
                 return new List<FeatureFlag>();
             }
 
@@ -62,6 +63,7 @@ public class SettingsService : IAsyncDisposable
         {
             _logger.LogError(ex, "Error retrieving disabled features for user {UserId}", userId);
             // Return empty list on error to fail gracefully
+
             return new List<FeatureFlag>();
         }
     }
@@ -90,9 +92,11 @@ public class SettingsService : IAsyncDisposable
         try
         {
             // Check if cache is still valid
+
             if (_cachedConfig is not null && DateTime.UtcNow < _cacheExpiry)
             {
                 _logger.LogDebug("Returning cached feature flags configuration");
+
                 return _cachedConfig;
             }
 
@@ -111,7 +115,8 @@ public class SettingsService : IAsyncDisposable
             _cachedConfig = config;
             _cacheExpiry = DateTime.UtcNow.Add(_cacheTimeout);
 
-            _logger.LogInformation("Loaded feature flags configuration with {Count} user configurations", 
+            _logger.LogInformation(
+                "Loaded feature flags configuration with {Count} user configurations",
                 config.FeatureFlags.Count);
 
             return config;
@@ -140,7 +145,8 @@ public class SettingsService : IAsyncDisposable
             _cachedConfig = config;
             _cacheExpiry = DateTime.UtcNow.Add(_cacheTimeout);
 
-            _logger.LogInformation("Updated feature flags configuration with {Count} user configurations", 
+            _logger.LogInformation(
+                "Updated feature flags configuration with {Count} user configurations",
                 config.FeatureFlags.Count);
         }
         catch (Exception ex)
@@ -183,8 +189,10 @@ public class SettingsService : IAsyncDisposable
 
             await UpdateFeatureFlagsConfigAsync(config);
 
-            _logger.LogInformation("Updated feature flags for user {UserId} with {Count} disabled features", 
-                userId, disabledFeatures.Count);
+            _logger.LogInformation(
+                "Updated feature flags for user {UserId} with {Count} disabled features",
+                userId,
+                disabledFeatures.Count);
         }
         catch (Exception ex)
         {

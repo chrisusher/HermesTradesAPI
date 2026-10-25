@@ -4,7 +4,6 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Services;
-using Shared;
 using Shared.DTOs.Portfolios;
 using Shared.Interfaces;
 
@@ -27,12 +26,17 @@ public sealed class UpdatePortfolio : HttpFunction
 
     [Function("UpdatePortfolio")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "v1/{userId}/portfolios/{portfolioId:guid}")] HttpRequestData req,
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "put",
+            Route = "v1/{userId}/portfolios/{portfolioId:guid}")]
+        HttpRequestData req,
         string userId,
         string portfolioId)
     {
         try
         {
+
             if (!Guid.TryParse(userId, out var parsedUserId) || !Guid.TryParse(portfolioId, out var parsedPortfolioId))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new 
@@ -58,6 +62,7 @@ public sealed class UpdatePortfolio : HttpFunction
             }
 
             var requestBody = await req.ReadAsStringAsync();
+
             if (string.IsNullOrWhiteSpace(requestBody))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new 
@@ -67,6 +72,7 @@ public sealed class UpdatePortfolio : HttpFunction
             }
 
             var portfolioRequest = JsonSerializer.Deserialize<Portfolio>(requestBody, SharedCommon.JsonOptions);
+
             if (portfolioRequest is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new 
@@ -79,11 +85,13 @@ public sealed class UpdatePortfolio : HttpFunction
             portfolioRequest.PortfolioId = parsedPortfolioId;
 
             var updatedPortfolio = await _portfolioService.UpdatePortfolioAsync(portfolioRequest);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.OK, updatedPortfolio);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update portfolio {PortfolioId} for user {UserId}", portfolioId, userId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.InternalServerError, new 
             { 
                 error = "Failed to update portfolio." 

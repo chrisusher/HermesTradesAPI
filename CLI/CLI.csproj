@@ -12,12 +12,12 @@
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="dotenv.net" Version="3.2.1" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.51.0" />
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+    <PackageReference Include="dotenv.net" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.63.2" />
+    <PackageReference Include="System.CommandLine" Version="3.0.0-rc.2.26504.105" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.13" />
   </ItemGroup>
 
 </Project>

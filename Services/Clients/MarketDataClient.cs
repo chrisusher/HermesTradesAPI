@@ -1,6 +1,8 @@
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Services.Clients;
 
@@ -19,6 +21,19 @@ public class MarketDataClient
     }
 
     protected string BaseUrl => _baseUrl;
+
+    protected static string GetDailyCacheKey(string endpoint, DateTimeOffset now)
+    {
+        var endpointHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(endpoint)));
+
+        return $"market-data/{now:yyyy-MM-dd}/{endpointHash}";
+    }
+
+    protected static TimeSpan GetDailyCacheTtl(DateTimeOffset now)
+    {
+        // Expire at UTC midnight, even when the first request arrives late in the day.
+        return now.UtcDateTime.Date.AddDays(1) - now.UtcDateTime;
+    }
 
     protected async Task<string> GetApiKeyAsync(CancellationToken cancellationToken)
     {

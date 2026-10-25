@@ -13,10 +13,20 @@ public class StrategyRepository
         _dbContext = dbContext;
     }
 
-    public async Task<StrategyTable?> GetStrategyAsync(string strategyId)
+    public async Task<StrategyTable?> GetStrategyAsync(
+        string strategyId,
+        CancellationToken cancellationToken = default,
+        bool trackChanges = true)
     {
-        return await _dbContext.Strategies
-            .FirstOrDefaultAsync(s => s.PartitionKey == strategyId);
+        var query = _dbContext.Strategies.AsQueryable();
+
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query
+            .FirstOrDefaultAsync(strategy => strategy.PartitionKey == strategyId, cancellationToken);
     }
 
     public async Task<IEnumerable<StrategyTable>> GetStrategiesAsync()

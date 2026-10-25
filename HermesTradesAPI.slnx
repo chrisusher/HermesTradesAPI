@@ -1,5 +1,6 @@
 <Solution>
     <Folder Name="/Tests/">
+        <Project Path="Tests/Strategy.Tests/Strategy.Tests.csproj" />
         <Project Path="Tests/Services.Tests/Services.Tests.csproj" />
     </Folder>
     <Project Path="Backend/Backend.csproj" />

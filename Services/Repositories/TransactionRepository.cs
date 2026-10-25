@@ -5,17 +5,20 @@ using Shared.DTOs.Transactions;
 
 namespace Services.Repositories;
 
-public class TransactionRepository
+public partial class TransactionRepository
 {
     private readonly DatabaseContext _dbContext;
     private readonly PortfolioRepository _portfolioRepository;
+    private readonly IDbContextFactory<DatabaseContext> _strategyContextFactory;
 
     public TransactionRepository(
         DatabaseContext dbContext,
-        PortfolioRepository portfolioRepository)
+        PortfolioRepository portfolioRepository,
+        IDbContextFactory<DatabaseContext> strategyContextFactory)
     {
         _dbContext = dbContext;
         _portfolioRepository = portfolioRepository;
+        _strategyContextFactory = strategyContextFactory;
     }
 
     public async Task<TransactionsTable> AddTransactionAsync(TransactionObject transaction, Guid portfolioId, Guid userId, string? strategyId, Guid? strategyVersionId = null)
@@ -33,6 +36,7 @@ public class TransactionRepository
         // {
         //     portfolio = await _dbContext.Portfolio.FirstOrDefaultAsync(x => x.Id == portfolio!.Id);
         // }
+
         if (!isBuy)
         {
             await ProcessSaleOrderAsync(transaction, transactionTable);
@@ -90,7 +94,7 @@ public class TransactionRepository
         return transactions.Count;
     }
 
-    public async Task<TransactionsTable?> FindOriginalTransactionAsync(Guid stockId, decimal quantityToSell)
+    public async Task<TransactionsTable?> FindOriginalTransactionAsync(Guid stockId, decimal quantityToSell, Guid portfolioId)
     {
         var transactions = await GetOpenBuyTransactionsForStockAsync(stockId);
 
@@ -99,6 +103,11 @@ public class TransactionRepository
 
         foreach (var transactionTable in transactions)
         {
+            if (transactionTable.PortfolioId != portfolioId)
+            {
+                continue;
+            }
+
             var quantityRemaining = transactionTable.QuantityRemaining ?? transactionTable.Quantity;
 
             if (quantityRemaining <= 0)
@@ -259,6 +268,7 @@ public class TransactionRepository
         {
             filteredQuery = filteredQuery.Where(t => StaticData.IsBuyOrder(t.Type));
         }
+
         else if (orderGroup == OrderGroupType.Sales)
         {
             filteredQuery = filteredQuery.Where(t => !StaticData.IsBuyOrder(t.Type));
@@ -269,11 +279,18 @@ public class TransactionRepository
             .ToList();
     }
 
-    public async Task<TransactionsTable?> TransactionExistsAsync(Guid stockId, decimal price, decimal quantity, decimal totalCost, OrderType orderType)
+    public async Task<TransactionsTable?> TransactionExistsAsync(
+        Guid stockId,
+        decimal price,
+        decimal quantity,
+        decimal totalCost,
+        OrderType orderType,
+        Guid portfolioId)
     {
         return await _dbContext.Transactions
             .AsNoTracking()
             .FirstOrDefaultAsync(t =>
+                t.PortfolioId == portfolioId &&
                 t.StockId == stockId &&
                 t.Price == price &&
                 t.Quantity == quantity &&
@@ -383,7 +400,10 @@ public class TransactionRepository
 
         // Find the original transaction, update the transaction and also set the original transaction as sold.
 
-        var originalTransaction = await FindOriginalTransactionAsync(transaction.StockId, transaction.Quantity);
+        var originalTransaction = transaction.OriginalTransactionId is Guid originalId
+            ? await _dbContext.Transactions.AsNoTracking().SingleOrDefaultAsync(
+                x => x.Id == originalId && x.PortfolioId == transactionTable.PortfolioId)
+            : await FindOriginalTransactionAsync(transaction.StockId, transaction.Quantity, transactionTable.PortfolioId);
 
         if (originalTransaction is null)
         {

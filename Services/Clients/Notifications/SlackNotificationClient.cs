@@ -3,21 +3,27 @@ using Shared.Interfaces;
 
 namespace Services.Clients.Notifications;
 
-public class SlackNotificationClient : INotificationClient
+public class SlackNotificationClient : INotificationClient, IDisposable
 {
     private const string _screenerSlackUrlSecretName = "SLACK-SCREENER-WEBHOOKURL";
     private readonly ISecretClient _secretClient;
     private readonly CalendarClient _calendarClient;
     private readonly ILogger<SlackNotificationClient> _logger;
+    private readonly HttpClient _httpClient;
 
     public SlackNotificationClient(
         ISecretClient secretClient,
         CalendarClient calendarClient,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        HttpClient? httpClient = null)
     {
         _secretClient = secretClient;
         _calendarClient = calendarClient;
         _logger = loggerFactory.CreateLogger<SlackNotificationClient>();
+        _httpClient = httpClient ?? new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
     }
 
     public async Task<bool> SendScreenerNotificationAsync(string symbol, string subject, string message)
@@ -41,6 +47,13 @@ public class SlackNotificationClient : INotificationClient
         return result;
     }
 
+    public async Task<bool> SendTradeNotificationAsync(string subject, string message, CancellationToken cancellationToken = default)
+    {
+        var webhookUrl = await _secretClient.GetSecretAsync(_screenerSlackUrlSecretName);
+
+        return await SendNotificationAsync(webhookUrl, subject, message, cancellationToken);
+    }
+
     public async Task<bool> SendSummaryNotificationAsync(string screenerName, string subject, string message)
     {
         if (!await _calendarClient.ShouldSendNotificationsAsync())
@@ -62,7 +75,13 @@ public class SlackNotificationClient : INotificationClient
         return result;
     }
 
-    private async Task<bool> SendNotificationAsync(string webhookUrl, string subject, string message)
+    public void Dispose() => _httpClient.Dispose();
+
+    private async Task<bool> SendNotificationAsync(
+        string webhookUrl,
+        string subject,
+        string message,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -72,10 +91,8 @@ public class SlackNotificationClient : INotificationClient
                 text = $"{subject}{Environment.NewLine}{message}",
             };
 
-            var httpClient = new HttpClient();
-
             // Post the message to Slack
-            var response = await httpClient.PostAsJsonAsync(webhookUrl, payload);
+            using var response = await _httpClient.PostAsJsonAsync(webhookUrl, payload, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

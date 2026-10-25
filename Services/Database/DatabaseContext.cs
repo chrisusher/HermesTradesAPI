@@ -16,6 +16,8 @@ public class DatabaseContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<TransactionsTable>().UseETagConcurrency();
+
         modelBuilder.Entity<MigrationTable>()
             .ToContainer("Migrations")
             .HasPartitionKey(pk => pk.MigrationId)
@@ -26,7 +28,10 @@ public class DatabaseContext : DbContext
             .ToContainer("Portfolio")
             .HasPartitionKey(pk => pk.PartitionKey)
             .HasDiscriminator<string>("Discriminator")
-            .HasValue<PortfolioTable>("PortfolioTable");        
+            .HasValue<PortfolioTable>("PortfolioTable");
+
+        modelBuilder.Entity<PortfolioTable>()
+            .UseETagConcurrency();
 
         // Individual portfolio holdings (one document per symbol) to prevent large
         // embedded arrays on Portfolio documents exceeding Cosmos 2MB limit.
@@ -35,6 +40,9 @@ public class DatabaseContext : DbContext
             .HasPartitionKey(pk => pk.PartitionKey)
             .HasDiscriminator<string>("Discriminator")
             .HasValue<PortfolioHoldingTable>("PortfolioHoldingTable");
+
+        modelBuilder.Entity<PortfolioHoldingTable>()
+            .UseETagConcurrency();
 
         modelBuilder.Entity<SettingsTable>()
             .ToContainer("Settings")
@@ -48,6 +56,15 @@ public class DatabaseContext : DbContext
             .HasDiscriminator<string>("Discriminator")
             .HasValue<StrategyTable>("StrategyTable");
 
+        modelBuilder.Entity<StrategyExecutionTable>()
+            .ToContainer("StrategyExecutions")
+            .HasPartitionKey(x => x.PartitionKey)
+            .HasDiscriminator<string>("Discriminator")
+            .HasValue<StrategyExecutionTable>("StrategyExecutionTable");
+
+        modelBuilder.Entity<StrategyExecutionTable>()
+            .UseETagConcurrency();
+
         modelBuilder.Entity<StrategyVersionTable>()
             .ToContainer("StrategyVersions")
             .HasPartitionKey(pk => pk.PartitionKey)
@@ -60,17 +77,14 @@ public class DatabaseContext : DbContext
             .HasDiscriminator<string>("Discriminator")
             .HasValue<TransactionsTable>("TransactionTable");
 
+        modelBuilder.Entity<TransactionsTable>()
+            .UseETagConcurrency();
+
         modelBuilder.Entity<UserTable>()
             .ToContainer("Users")
             .HasPartitionKey(pk => pk.PartitionKey)
             .HasDiscriminator<string>("Discriminator")
             .HasValue<UserTable>("UserTable");
-
-        // modelBuilder.Entity<PortfolioHistoryTable>()
-        //     .ToContainer("PortfolioHistory")
-        //     .HasPartitionKey(pk => pk.StrategyId)
-        //     .Property(p => p.StrategyId)
-        //     .ToJsonProperty("id");
     }
 
     public DbSet<MigrationTable> Migrations { get; set; }
@@ -82,6 +96,8 @@ public class DatabaseContext : DbContext
     public DbSet<PortfolioHistoryTable> PortfolioHistory { get; set; }
 
     public DbSet<StrategyTable> Strategies { get; set; }
+
+    public DbSet<StrategyExecutionTable> StrategyExecutions { get; set; }
 
     public DbSet<StrategyVersionTable> StrategyVersions { get; set; }
 

@@ -4,7 +4,6 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Services;
-using Shared;
 using Shared.DTOs.Portfolios;
 using Shared.Interfaces;
 
@@ -27,11 +26,16 @@ public sealed class CreatePortfolio : HttpFunction
 
     [Function("CreatePortfolio")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "v1/{userId}/portfolios")] HttpRequestData req,
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "post",
+            Route = "v1/{userId}/portfolios")]
+        HttpRequestData req,
         string userId)
     {
         try
         {
+
             if (!Guid.TryParse(userId, out var parsedUserId))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new 
@@ -81,11 +85,13 @@ public sealed class CreatePortfolio : HttpFunction
             var createdPortfolio = await _portfolioService.CreatePortfolioAsync(parsedUserId, portfolioRequest, user.CurrencyCode);
             
             var response = await CreateJsonResponseAsync(req, HttpStatusCode.Created, createdPortfolio);
+
             return response;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create portfolio for user {UserId}", userId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.InternalServerError, new 
             { 
                 error = "Failed to create portfolio." 

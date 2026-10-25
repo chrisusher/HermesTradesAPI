@@ -8,7 +8,7 @@ using Shared.DTOs.Transactions;
 
 namespace Services;
 
-public class TransactionService
+public partial class TransactionService
 {
     private readonly PortfolioRepository _portfolioRepository;
     private readonly StockClient _stockClient;
@@ -33,7 +33,12 @@ public class TransactionService
         _logger = loggerFactory.CreateLogger<TransactionService>();
     }
 
-    public async Task<TransactionResponse?> BuyStockAsync(Guid userId, Guid portfolioId, PortfolioHolding stock, TransactionObject transaction, string strategyId = "")
+    public async Task<TransactionResponse?> BuyStockAsync(
+        Guid userId,
+        Guid portfolioId,
+        PortfolioHolding stock,
+        TransactionObject transaction,
+        string strategyId = "")
     {
         if (!StaticData.IsBuyOrder(transaction.Type))
         {
@@ -49,6 +54,7 @@ public class TransactionService
         if (transaction.TotalCost <= 0)
         {
             _logger.LogWarning("Buy rejected for {Symbol}: Non-positive TotalCost {TotalCost}.", stock.Symbol, transaction.TotalCost);
+
             return null;
         }
 
@@ -57,11 +63,12 @@ public class TransactionService
             transaction.Price,
             transaction.Quantity,
             transaction.TotalCost,
-            transaction.Type);
+            transaction.Type, portfolioId);
 
         TransactionResponse response;
 
         // Check for duplicate transaction
+
         if (existingTransaction != null)
         {
             _logger.LogDebug("Duplicate transaction detected for stock {Symbol} with price {Price}, quantity {Quantity}, total cost {TotalCost}.",
@@ -71,6 +78,7 @@ public class TransactionService
 
             // Even if Transaction already exists make sure the portfolio has the transaction.
             await _portfolioRepository.AddStockToPortfolioAsync(userId, portfolioId, stock, response, strategyId);
+
             return response;
         }
 
@@ -82,7 +90,11 @@ public class TransactionService
             throw new DataNotFoundException($"User with ID {userId} not found.");
         }
 
-        var totalCostToUser = await _fxRateClient.ConvertAsync(transaction.TotalCost, transaction.Currency, user.CurrencyCode, transaction.TransactionDate ?? DateTime.UtcNow);
+        var totalCostToUser = await _fxRateClient.ConvertAsync(
+            transaction.TotalCost,
+            transaction.Currency,
+            user.CurrencyCode,
+            transaction.TransactionDate ?? DateTime.UtcNow);
 
         var transactionResponse = await _transactionRepository.AddTransactionAsync(new()
         {
@@ -219,6 +231,7 @@ public class TransactionService
 
     public async Task<int> DeleteTransactionsByStrategyAsync(string strategyId)
     {
+
         return await _transactionRepository.DeleteTransactionsByStrategyAsync(strategyId);
     }
 
@@ -302,6 +315,7 @@ public class TransactionService
     public async Task<TransactionResponse?> GetTransactionByIdAsync(Guid transactionId)
     {
         var transaction = await _transactionRepository.GetTransactionByIdAsync(transactionId);
+
         return transaction?.ToTransactionResponse();
     }
 
@@ -349,7 +363,10 @@ public class TransactionService
     public async Task<List<TransactionResponse>> GetTransactionsByIdsAsync(List<Guid> transactionIds, OrderGroupType orderGroup = OrderGroupType.All)
     {
         var transactions = await _transactionRepository.GetTransactionsByIdsAsync(transactionIds, orderGroup);
-        return transactions.Select(t => t.ToTransactionResponse()).ToList();
+
+        return transactions
+            .Select(t => t.ToTransactionResponse())
+            .ToList();
     }
 
     public async Task<List<TransactionResponse>> GetAllTransactionsAsync(DateTime? fromDate = null, DateTime? toDate = null)
@@ -398,7 +415,10 @@ public class TransactionService
         }
         else
         {
-            originalTransaction = await _transactionRepository.FindOriginalTransactionAsync(stock.StockId, requestBody.Quantity);
+            originalTransaction = await _transactionRepository.FindOriginalTransactionAsync(
+                stock.StockId,
+                requestBody.Quantity,
+                portfolioId);
         }
 
         var existingTransaction = await _transactionRepository.TransactionExistsAsync(
@@ -406,11 +426,12 @@ public class TransactionService
             requestBody.Price,
             quantity,
             totalCost,
-            transaction.Type);
+            transaction.Type, portfolioId);
 
         TransactionResponse transactionResponse;
 
         // Check for duplicate transaction
+
         if (existingTransaction != null)
         {
             _logger.LogDebug("Duplicate transaction detected for stock {Symbol} with price {Price}, quantity {Quantity}, total cost {TotalCost}.",
@@ -419,6 +440,7 @@ public class TransactionService
             transactionResponse = existingTransaction.ToTransactionResponse(transaction);
 
             transactionResponse.Symbol = stock.Symbol;
+
             return transactionResponse;
         }
 
@@ -456,7 +478,12 @@ public class TransactionService
         return transactionResponse;
     }
 
-    public async Task<TransactionResponse?> SellStockAsync(Guid userId, Guid portfolioId, PortfolioHolding stock, TransactionObject transaction, string strategyId = "")
+    public async Task<TransactionResponse?> SellStockAsync(
+        Guid userId,
+        Guid portfolioId,
+        PortfolioHolding stock,
+        TransactionObject transaction,
+        string strategyId = "")
     {
         if (StaticData.IsBuyOrder(transaction.Type))
         {
@@ -468,11 +495,12 @@ public class TransactionService
             transaction.Price,
             transaction.Quantity,
             transaction.TotalCost,
-            transaction.Type);
+            transaction.Type, portfolioId);
 
         TransactionResponse transactionResponse;
 
         // Check for duplicate transaction
+
         if (existingTransaction != null)
         {
             _logger.LogDebug("Duplicate transaction detected for stock {Symbol} with price {Price}, quantity {Quantity}, total cost {TotalCost}.",
@@ -603,6 +631,7 @@ public class TransactionService
             var stockProfitLoss = totalSellProceeds + totalBuyCost;
             profitLoss += stockProfitLoss;
         }
+
         return Math.Round(profitLoss);
     }
 
@@ -626,6 +655,7 @@ public class TransactionService
             var currencyCode = stock.CurrencyCode;
 
             // For GBX (pence), first convert to GBP
+
             if (stock.CurrencyCode == CurrencyCode.GBX)
             {
                 amount = amount / 100; // Convert pence to pounds

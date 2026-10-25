@@ -9,15 +9,20 @@ using Services;
 var rootCommand = new RootCommand("Stock Trader Agent - Execute trading strategy operations from the command line");
 
 // Global options
-var verboseOption = new Option<bool>(aliases: new[] { "--verbose", "-v" }, description: "Enable verbose logging (Information level)");
-var debugEfOption = new Option<bool>(aliases: new[] { "--debug-ef" }, description: "Enable Entity Framework Core debug logging");
-rootCommand.AddGlobalOption(verboseOption);
-rootCommand.AddGlobalOption(debugEfOption);
+var verboseOption = new Option<bool>("--verbose", "-v") {
+    Description = "Enable verbose logging (Information level)",
+    Recursive = true
+};
+var debugEfOption = new Option<bool>("--debug-ef") {
+    Description = "Enable Entity Framework Core debug logging",
+    Recursive = true
+};
+rootCommand.Add(verboseOption);
+rootCommand.Add(debugEfOption);
 
-rootCommand.AddCommand(new Command("infra", "Infrastructure related commands")
-{
-    DatabaseCommand.Create(),
-});
+var infrastructureCommand = new Command("infra", "Infrastructure related commands");
+infrastructureCommand.Add(DatabaseCommand.Create());
+rootCommand.Add(infrastructureCommand);
 
 try
 {
@@ -44,10 +49,8 @@ try
 
     // Build host for DI
     var host = Host.CreateDefaultBuilder(args)
-        .ConfigureServices((context, services) =>
-        {
-            services.AddLogging(options =>
-            {
+        .ConfigureServices((context, services) => {
+            services.AddLogging(options => {
                 options.AddConsole();
                 options.SetMinimumLevel(verbose ? LogLevel.Information : LogLevel.Warning);
 
@@ -67,11 +70,12 @@ try
     using var scope = host.Services.CreateScope();
     CommandBase.ServiceProvider = scope.ServiceProvider;
 
-    return await rootCommand.InvokeAsync(args);
+    return await rootCommand.Parse(args).InvokeAsync(new InvocationConfiguration(), CancellationToken.None);
 }
 catch (Exception ex)
 {
     Console.WriteLine($"Application error: {ex.Message}");
+
     if (ex.InnerException != null)
     {
         Console.WriteLine($"Inner exception: {ex.InnerException.Message}");

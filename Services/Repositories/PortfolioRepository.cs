@@ -6,17 +6,20 @@ using Shared.DTOs.Transactions;
 
 namespace Services.Repositories;
 
-public class PortfolioRepository
+public partial class PortfolioRepository
 {
     private readonly DatabaseContext _context;
     private readonly StrategyRepository _strategyRepository;
+    private readonly IDbContextFactory<DatabaseContext> _strategyContextFactory;
 
     public PortfolioRepository(
         DatabaseContext context,
-        StrategyRepository strategyRepository)
+        StrategyRepository strategyRepository,
+        IDbContextFactory<DatabaseContext> strategyContextFactory)
     {
         _context = context;
         _strategyRepository = strategyRepository;
+        _strategyContextFactory = strategyContextFactory;
     }
 
     public async Task<PortfolioHoldingTable> AddAdhocHoldingAsync(Guid portfolioId, PortfolioStock stock, AddAdhocHoldingRequest request)
@@ -349,13 +352,23 @@ public class PortfolioRepository
     //     return latest;
     // }
 
-    public async Task<PortfolioTable> GetPortfolioAsync(Guid userId, Guid portfolioId)
+    public async Task<PortfolioTable> GetPortfolioAsync(
+        Guid userId,
+        Guid portfolioId,
+        CancellationToken cancellationToken = default,
+        bool trackChanges = true)
     {
         var query = _context.Portfolio.AsQueryable();
 
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
         var portfolio = await query
-            .WithPartitionKey(userId.ToString())
-            .FirstOrDefaultAsync(x => x.Id == portfolioId);  // Cannot use AsNoTracking here as we need to update the entity later
+            .FirstOrDefaultAsync(
+                portfolio => portfolio.Id == portfolioId && portfolio.PartitionKey == userId.ToString(),
+                cancellationToken);
 
         if (portfolio is null)
         {

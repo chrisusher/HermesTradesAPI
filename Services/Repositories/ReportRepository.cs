@@ -1,6 +1,3 @@
-using System.Text;
-using Shared.Interfaces;
-
 namespace Services.Repositories;
 
 public class ReportRepository
@@ -24,6 +21,7 @@ public class ReportRepository
         if (file is null)
         {
             _logger.LogWarning("No report found with prefix {ReportPrefix}", reportPrefix);
+
             return default;
         }
 

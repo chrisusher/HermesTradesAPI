@@ -3,7 +3,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Services;
-using Shared.Exceptions;
+using ChrisUsher.Core.Shared.Exceptions;
 using Shared.Interfaces;
 
 namespace Backend.Functions.v1.Portfolios.Stocks;
@@ -25,13 +25,18 @@ public sealed class GetPortfolioStock : HttpFunction
 
     [Function("GetPortfolioStock")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v1/{userId}/portfolios/{portfolioId:guid}/stocks/{stockId:guid}")] HttpRequestData req,
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "get",
+            Route = "v1/{userId}/portfolios/{portfolioId:guid}/stocks/{stockId:guid}")]
+        HttpRequestData req,
         string userId,
         string portfolioId,
         string stockId)
     {
         try
         {
+
             if (!Guid.TryParse(userId, out var parsedUserId) || !Guid.TryParse(portfolioId, out var parsedPortfolioId) || !Guid.TryParse(stockId, out var parsedStockId))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -72,6 +77,7 @@ public sealed class GetPortfolioStock : HttpFunction
         catch (DataNotFoundException ex)
         {
             _logger.LogWarning(ex, "Portfolio {PortfolioId} for user {UserId} was not found.", portfolioId, userId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.NotFound, new
             {
                 error = ex.Message
@@ -80,6 +86,7 @@ public sealed class GetPortfolioStock : HttpFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get stock {StockId} for user {UserId} and portfolio {PortfolioId}", stockId, userId, portfolioId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.InternalServerError, new
             {
                 error = "Failed to get stock."

@@ -6,7 +6,7 @@ using Shared.DTOs.Transactions;
 
 namespace Services;
 
-public class PortfolioService
+public partial class PortfolioService
 {
     private readonly PortfolioRepository _portfolioRepository;
     private readonly TransactionService _transactionService;

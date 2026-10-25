@@ -43,6 +43,10 @@ var containers = [
     partitionKeyPath: '/PartitionKey'
   }
   {
+    name: 'StrategyExecutions'
+    partitionKeyPath: '/PartitionKey'
+  }
+  {
     name: 'StrategyVersions'
     partitionKeyPath: '/PartitionKey'
   }

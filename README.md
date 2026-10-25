@@ -69,6 +69,8 @@ Use it when you want:
 
 ## Configuration
 
+The disabled-by-default [QQQ overnight bounce strategy](Docs/nasdaq-overnight-bounce.md) adds separate buy/sell timers, paper execution, Foundry support reviews, and retryable Slack notifications. Its configuration, persistence, validation and TEST activation steps are documented there.
+
 The solution uses a combination of:
 
 - app settings files for local configuration

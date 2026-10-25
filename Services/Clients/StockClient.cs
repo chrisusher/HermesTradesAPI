@@ -1,6 +1,5 @@
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Configuration;
-using Shared;
 using Shared.DTOs.Stocks;
 using System.Net.Http.Headers;
 
@@ -31,6 +30,7 @@ public class StockClient : MarketDataClient
         }
 
         var endpoint = $"{_baseUrl.TrimEnd('/')}/{symbol.Trim().ToUpperInvariant()}";
+
         return await GetStockFromEndpointAsync(endpoint, cancellationToken);
     }
 
@@ -42,6 +42,7 @@ public class StockClient : MarketDataClient
         }
 
         var endpoint = $"{_baseUrl.TrimEnd('/')}/id/{stockId}";
+
         return await GetStockFromEndpointAsync(endpoint, cancellationToken);
     }
 

@@ -11,6 +11,14 @@ public class TransactionsTable : CosmosTable
 
     public Guid? OriginalTransactionId { get; set; }
 
+    public string? ExecutionKey { get; set; }
+
+    public DateTimeOffset? SourceCandleTime { get; set; }
+    
+    public decimal? PortfolioCashAmount { get; set; }
+    
+    public List<string> AppliedStrategySales { get; set; } = [];
+
     public CurrencyCode Currency { get; set; } = CurrencyCode.Unknown;
 
     public Guid PortfolioId { get; set; }
@@ -89,6 +97,7 @@ public class TransactionsTable : CosmosTable
         var response = ToTransactionResponse();
         response.Symbol = transaction.Symbol;
         response.PortfolioId = PortfolioId;
+
         return response;
     }
 
@@ -97,6 +106,7 @@ public class TransactionsTable : CosmosTable
         var response = ToTransactionResponse();
         response.Symbol = updateRequest.Symbol;
         response.PortfolioId = PortfolioId;
+
         return response;
     }
 }

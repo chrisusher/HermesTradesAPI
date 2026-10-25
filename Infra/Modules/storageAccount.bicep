@@ -77,6 +77,16 @@ resource settingsBlobContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   }
 }
 
+resource strategyLocksBlobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  parent: blobService
+  name: 'strategy-locks'
+  properties: {
+    defaultEncryptionScope: '$account-encryption-key'
+    denyEncryptionScopeOverride: false
+    publicAccess: 'None'
+  }
+}
+
 resource lifecycleManagement 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-01' = {
   name: 'default'
   parent: storageAccount

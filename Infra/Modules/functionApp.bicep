@@ -100,6 +100,18 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     siteConfig: {
       appSettings: [
         {
+          name: 'NasdaqBounce__EntriesEnabled'
+          value: 'false'
+        }
+        {
+          name: 'NasdaqBounce__FoundryEndpoint'
+          value: 'https://market-data-foundry.cognitiveservices.azure.com/'
+        }
+        {
+          name: 'NasdaqBounce__FoundryDeployment'
+          value: 'gpt-6-luna'
+        }
+        {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
           value: appInsights.properties.InstrumentationKey
         }
@@ -134,6 +146,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'Database__Key'
           value: cosmosKey
+        }
+        {
+          name: 'Database__AccountName'
+          value: cosmosUrl
+        }
+        {
+          name: 'Database__DatabaseName'
+          value: cosmosDatabase
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'

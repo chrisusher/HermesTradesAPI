@@ -23,6 +23,9 @@ public class PortfolioTable : CosmosTable
 
     public Guid UserId { get; set; }
 
+    // Written in the same document as FreeCash, making each strategy cash movement resumable.
+    public List<string> AppliedStrategyTransactions { get; set; } = [];
+
     public Portfolio ToPortfolioDto()
     {
         return new Portfolio

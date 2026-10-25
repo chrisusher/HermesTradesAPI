@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Azure.Functions.Worker.Http;
 using Services;
-using Shared;
 using Shared.DTOs.Users;
 using Shared.Interfaces;
 
@@ -27,6 +26,7 @@ public abstract class HttpFunction
     protected async Task<bool> IsAuthorisedAsync(HttpRequestData req, CancellationToken cancellationToken)
     {
         var apiKey = GetApiKey(req);
+
         return await _apiKeyValidationService.IsValidApiKeyAsync(apiKey, cancellationToken);
     }
 
@@ -45,12 +45,14 @@ public abstract class HttpFunction
         if (statusCode == HttpStatusCode.NoContent || body is null)
         {
             var noContentResponse = req.CreateResponse(statusCode);
+
             return noContentResponse;
         }
 
         var response = req.CreateResponse(statusCode);
         response.Headers.Add("Content-Type", "application/json");
         await response.WriteStringAsync(JsonSerializer.Serialize(body, SharedCommon.JsonOptions));
+
         return response;
     }
 

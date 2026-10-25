@@ -4,7 +4,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Services;
-using Shared.Exceptions;
+using ChrisUsher.Core.Shared.Exceptions;
 using Shared.Interfaces;
 
 namespace Backend.Functions.v1.Portfolios.Stocks;
@@ -26,13 +26,18 @@ public sealed class GetPortfolioStockTransactions : HttpFunction
 
     [Function("GetPortfolioStockTransactions")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v1/{userId}/portfolios/{portfolioId:guid}/stocks/{stockId:guid}/transactions")] HttpRequestData req,
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "get",
+            Route = "v1/{userId}/portfolios/{portfolioId:guid}/stocks/{stockId:guid}/transactions")]
+        HttpRequestData req,
         string userId,
         string portfolioId,
         string stockId)
     {
         try
         {
+
             if (!Guid.TryParse(userId, out var parsedUserId) || !Guid.TryParse(portfolioId, out var parsedPortfolioId) || !Guid.TryParse(stockId, out var parsedStockId))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -84,6 +89,7 @@ public sealed class GetPortfolioStockTransactions : HttpFunction
         catch (DataNotFoundException ex)
         {
             _logger.LogWarning(ex, "Unable to retrieve transactions for stock {StockId} in portfolio {PortfolioId} for user {UserId}.", stockId, portfolioId, userId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.NotFound, new
             {
                 error = ex.Message
@@ -92,6 +98,7 @@ public sealed class GetPortfolioStockTransactions : HttpFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get transactions for stock {StockId} in portfolio {PortfolioId} for user {UserId}", stockId, portfolioId, userId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.InternalServerError, new
             {
                 error = "Failed to get stock transactions."
@@ -104,6 +111,7 @@ public sealed class GetPortfolioStockTransactions : HttpFunction
         date = null;
 
         var query = req.Url.Query.TrimStart('?');
+
         if (string.IsNullOrWhiteSpace(query))
         {
             return allowMissing;
@@ -112,6 +120,7 @@ public sealed class GetPortfolioStockTransactions : HttpFunction
         foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = segment.Split('=', 2);
+
             if (!parts[0].Equals(key, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
@@ -123,9 +132,11 @@ public sealed class GetPortfolioStockTransactions : HttpFunction
             }
 
             var rawValue = Uri.UnescapeDataString(parts[1]);
+
             if (DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedDate))
             {
                 date = parsedDate;
+
                 return true;
             }
 

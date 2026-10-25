@@ -1,4 +1,10 @@
 global using Shared.Enums;
-global using Shared.Exceptions;
 global using Microsoft.Extensions.Logging;
 global using System.Text.Json;
+global using ChrisUsher.Core.Shared;
+global using ChrisUsher.Core.Shared.Exceptions;
+global using CurrencyCode = ChrisUsher.Core.Shared.Enums.CurrencyCode;
+global using Shared.DTOs.Strategies;
+global using Shared.DTOs.Strategies.NasdaqBounce;
+global using Shared.Interfaces.Strategies.NasdaqBounce;
+global using IStorageService = ChrisUsher.Core.Services.Interfaces.IStorageService;

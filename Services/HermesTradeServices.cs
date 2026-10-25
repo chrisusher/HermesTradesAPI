@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs;
+using ChrisUsher.Core.Services.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -7,8 +8,14 @@ using Services.Azure;
 using Services.Clients;
 using Services.Database;
 using Services.Repositories;
+using Services.Strategies;
 using Shared.Config;
 using Shared.Interfaces;
+using Services.Clients.Notifications;
+using Services.Strategies.NasdaqBounce;
+using Azure.Identity;
+using ChrisUsher.Core.Services.Cache;
+using ChrisUsher.Core.Services.Interfaces;
 
 namespace Services;
 
@@ -19,8 +26,7 @@ public static class HermesTradeServices
         IConfiguration configuration
     )
     {
-        services.AddLogging(logging =>
-        {
+        services.AddLogging(logging => {
             // Prevent Azure Storage logs from spamming unless there are errors
             logging.AddFilter("Azure.Storage.Blobs", LogLevel.Error);
             logging.AddFilter("Azure.Storage.Queues", LogLevel.Error);
@@ -33,32 +39,34 @@ public static class HermesTradeServices
             logging.AddFilter("Microsoft.Azure.WebJobs.Extensions.Storage", LogLevel.Error);
 
             // Suppress Azure Functions host internal storage operations
-            logging.AddFilter((category, level) =>
-            {
+            logging.AddFilter((category, level) => {
                 // Filter out Azure Storage request/response logs that are Information level or lower
+
                 if (category?.StartsWith("Azure.") == true && level <= LogLevel.Information)
                 {
                     return false;
                 }
+
                 return true;
             });
         });
 
         #region Azure Services
 
-        services.AddAzureClients(config =>
-        {
-            var storageConnectionString = configuration.GetConnectionString(configuration["REPORT_BLOBS_CONNECTIONSTRING"] ?? throw new InvalidOperationException("REPORT_BLOBS_CONNECTIONSTRING is not set in configuration"));
+        services.AddAzureClients(config => {
+            var storageSetting = configuration["REPORT_BLOBS_CONNECTIONSTRING"]
+                ?? throw new InvalidOperationException("REPORT_BLOBS_CONNECTIONSTRING is not set in configuration");
+            var storageConnectionString = configuration.GetConnectionString(storageSetting) ?? storageSetting;
 
             config.AddBlobServiceClient(storageConnectionString)
                 .WithName("TradeAPI");
 
-            // Add KeyVault
-            var keyVaultConfig = configuration
-                .GetSection("KeyVault")
-                .Get<KeyVaultConfig>();
-
-            config.AddSecretClient(new Uri(configuration["KEYVAULT_URI"] ?? throw new InvalidOperationException("KEYVAULT_URI is not set in configuration")));
+            var keyVaultUri = configuration["KEYVAULT_URI"]
+                ?? throw new InvalidOperationException("KEYVAULT_URI is not set in configuration");
+            config.AddSecretClient(new Uri(keyVaultUri));
+            config.UseCredential(new DefaultAzureCredential(new DefaultAzureCredentialOptions {
+                ManagedIdentityClientId = configuration["AZURE_CLIENT_ID"]
+            }));
         });
 
         #endregion
@@ -71,8 +79,7 @@ public static class HermesTradeServices
             .GetSection("Global")
             .Get<GlobalConfig>() ?? new GlobalConfig();
 
-        services.AddDbContext<DatabaseContext>(options =>
-        {
+        services.AddDbContextFactory<DatabaseContext>(options => {
             var accountEndpoint = NormaliseCosmosAccountEndpoint(configuration["Database:AccountName"] ?? configuration["Database__AccountName"] ?? string.Empty);
             var accountKey = configuration["Database:Key"] ?? configuration["Database__Key"] ?? string.Empty;
 
@@ -86,25 +93,43 @@ public static class HermesTradeServices
                 databaseName
             );
 
-            options.EnableSensitiveDataLogging();
-
 #if DEBUG
             options.EnableDetailedErrors();
-            options.LogTo(Console.WriteLine, LogLevel.Information);
 #endif
         });
 
-        services.AddTransient<IStorageService>(services =>
-        {
-            var blobServiceClient = services.GetRequiredService<BlobServiceClient>();
+        services.AddTransient<IStorageService>(services => {
+            var blobServiceClient = services.GetRequiredService<IAzureClientFactory<BlobServiceClient>>().CreateClient("TradeAPI");
+
             return new BlobStorageService(blobServiceClient);
         });
 
         #region Clients
 
+        services.AddSingleton<ICacheService>(serviceProvider => new BlobCacheService(
+            serviceProvider.GetRequiredService<IAzureClientFactory<BlobServiceClient>>().CreateClient("TradeAPI"),
+            serviceProvider.GetRequiredService<ILogger<BlobCacheService>>()));
+
         services.AddHttpClient<CandleClient>();
         services.AddHttpClient<FxRateClient>();
         services.AddHttpClient<StockClient>();
+        services.AddHttpClient<CalendarClient>();
+        services.AddScoped<ISecretClient, KeyVaultSecretClient>();
+        services.AddHttpClient<SlackNotificationClient>(client => client.Timeout = TimeSpan.FromSeconds(15));
+        services.AddScoped<INotificationClient>(sp => sp.GetRequiredService<SlackNotificationClient>());
+        var nasdaqBounceOptions = configuration
+            .GetSection(NasdaqBounceOptions.SectionName)
+            .Get<NasdaqBounceOptions>() ?? new NasdaqBounceOptions();
+        services.AddSingleton(nasdaqBounceOptions);
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddScoped<INasdaqBounceMarketData, NasdaqBounceMarketData>();
+        services.AddScoped<INasdaqBounceStore, NasdaqBounceService>();
+        services.AddScoped<NasdaqBounceCalendar>();
+        services.AddSingleton<INasdaqBounceSupportAnalyser, FoundryNasdaqBounceSupportAnalyser>();
+        services.AddScoped<NasdaqBounceStrategy>();
+        services.AddSingleton<IStrategyLock>(sp => new BlobNasdaqBounceLock(
+            sp.GetRequiredService<IAzureClientFactory<BlobServiceClient>>().CreateClient("TradeAPI"),
+            sp.GetRequiredService<ILogger<BlobNasdaqBounceLock>>()));
 
         #endregion
 
@@ -122,13 +147,14 @@ public static class HermesTradeServices
         services.AddScoped<StrategyVersionRepository>();
         services.AddScoped<TransactionRepository>();
         services.AddScoped<UserRepository>();
+        services.AddScoped<INasdaqBounceRepository, NasdaqBounceRepository>();
 
-        services.AddSingleton(sp =>
-        {
+        services.AddSingleton(sp => {
             // ReportRepository needs Backend storage for reports container
             var backendStorage = sp.GetRequiredService<IStorageService>();
 
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
             return new ReportRepository(backendStorage, loggerFactory);
         });
 
@@ -148,12 +174,12 @@ public static class HermesTradeServices
         services.AddScoped<StrategyVersionService>();
         services.AddScoped<TransactionService>();
 
-        services.AddScoped(sp =>
-        {
+        services.AddScoped(sp => {
             // SettingsService needs Backend storage for settings container
             var backendStorage = sp.GetRequiredService<IStorageService>();
 
             var logger = sp.GetRequiredService<ILoggerFactory>();
+
             return new SettingsService(backendStorage, logger);
         });
 

@@ -12,20 +12,21 @@ public class DatabaseCommand : CommandBase
         var dbCommand = new Command("database", "Commands for managing the database");
         var migrateCommand = new Command("migrate", "Run process to run database schema migrations");
 
-        var pendingOption = new Option<bool>(
-            "--pending",
-            () => false,
-            "Only lists pending migrations without applying them");
+        var pendingOption = new Option<bool>("--pending")
+        {
+            Description = "Only lists pending migrations without applying them",
+            DefaultValueFactory = _ => false
+        };
 
-        migrateCommand.AddOption(pendingOption);
+        migrateCommand.Add(pendingOption);
 
-        migrateCommand.SetHandler(async (bool pending) =>
+        migrateCommand.SetAction(async (parseResult, _) =>
         {
             var command = new DatabaseCommand();
-            await command.RunMigrateAsync(pending);
-        }, pendingOption);
-        
-        dbCommand.AddCommand(migrateCommand);
+            await command.RunMigrateAsync(parseResult.GetValue(pendingOption));
+        });
+
+        dbCommand.Add(migrateCommand);
 
         return dbCommand;
     }

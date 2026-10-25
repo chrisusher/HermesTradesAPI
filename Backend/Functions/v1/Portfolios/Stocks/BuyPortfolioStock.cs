@@ -5,10 +5,9 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Services;
 using Services.Clients;
-using Shared;
 using Shared.DTOs.Portfolios;
 using Shared.DTOs.Transactions;
-using Shared.Exceptions;
+using ChrisUsher.Core.Shared.Exceptions;
 using Shared.Interfaces;
 
 namespace Backend.Functions.v1.Portfolios.Stocks;
@@ -33,12 +32,17 @@ public sealed class BuyPortfolioStock : HttpFunction
 
     [Function("BuyPortfolioStock")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "v1/{userId}/portfolios/{portfolioId:guid}/stocks/buy")] HttpRequestData req,
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "post",
+            Route = "v1/{userId}/portfolios/{portfolioId:guid}/stocks/buy")]
+        HttpRequestData req,
         string userId,
         string portfolioId)
     {
         try
         {
+
             if (!Guid.TryParse(userId, out var parsedUserId) || !Guid.TryParse(portfolioId, out var parsedPortfolioId))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -64,6 +68,7 @@ public sealed class BuyPortfolioStock : HttpFunction
             }
 
             var requestBody = await req.ReadAsStringAsync();
+
             if (string.IsNullOrWhiteSpace(requestBody))
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -73,6 +78,7 @@ public sealed class BuyPortfolioStock : HttpFunction
             }
 
             var buyRequest = JsonSerializer.Deserialize<BuyTransactionRequestBody>(requestBody, SharedCommon.JsonOptions);
+
             if (buyRequest is null)
             {
                 return await CreateJsonResponseAsync(req, HttpStatusCode.BadRequest, new
@@ -153,6 +159,7 @@ public sealed class BuyPortfolioStock : HttpFunction
         catch (DataNotFoundException ex)
         {
             _logger.LogWarning(ex, "Unable to process buy request for user {UserId} and portfolio {PortfolioId}.", userId, portfolioId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.NotFound, new
             {
                 error = ex.Message
@@ -161,6 +168,7 @@ public sealed class BuyPortfolioStock : HttpFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to buy stock for user {UserId} and portfolio {PortfolioId}", userId, portfolioId);
+
             return await CreateJsonResponseAsync(req, HttpStatusCode.InternalServerError, new
             {
                 error = "Failed to buy stock."
