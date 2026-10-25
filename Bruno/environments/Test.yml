@@ -1,12 +1,17 @@
-name: Dev
+name: Test
 variables:
   - secret: true
     name: HOST
+    description: ""
   - name: PORT
     value: "443"
+    description: ""
   - secret: true
     name: USER_ID
+    description: ""
   - secret: true
     name: API_KEY
+    description: ""
   - secret: true
     name: PORTFOLIO_ID
+    description: ""

@@ -165,7 +165,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'KEYVAULT_URI'
-          value: 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/'
+          value: 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/'
         }
         {
           name: 'NasdaqBounce__FoundryEndpoint'
