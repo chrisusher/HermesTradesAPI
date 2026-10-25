@@ -77,6 +77,8 @@ The solution uses a combination of:
 - environment variables for deployment and runtime overrides
 - optional local environment files for CLI workflows
 
+For the GitHub Actions TEST deployment and Azure credential setup, see [GitHub Actions deployment](Docs/github-actions-deployment.md).
+
 ## Development mindset
 
 This repo is designed to be practical first and polished second: clear boundaries between API, services, and tooling, with enough structure to grow without becoming brittle.

@@ -100,18 +100,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     siteConfig: {
       appSettings: [
         {
-          name: 'NasdaqBounce__EntriesEnabled'
-          value: 'false'
-        }
-        {
-          name: 'NasdaqBounce__FoundryEndpoint'
-          value: 'https://market-data-foundry.cognitiveservices.azure.com/'
-        }
-        {
-          name: 'NasdaqBounce__FoundryDeployment'
-          value: 'gpt-6-luna'
-        }
-        {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
           value: appInsights.properties.InstrumentationKey
         }
@@ -144,6 +132,10 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: cosmosDatabase
         }
         {
+          name: 'CandleApi__BaseUrl'
+          value: 'https://market-data-functions.azurewebsites.net/api'
+        }
+        {
           name: 'Database__Key'
           value: cosmosKey
         }
@@ -164,12 +156,36 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: 'false'
         }
         {
+          name: 'Global__Environment'
+          value: environmentName
+        }
+        {
           name: 'KeyVault__KeyVaultName'
           value: keyVaultName
         }
         {
           name: 'KEYVAULT_URI'
           value: 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/'
+        }
+        {
+          name: 'NasdaqBounce__FoundryEndpoint'
+          value: 'https://market-data-foundry.services.ai.azure.com/api/projects/market-data-agents'
+        }
+        {
+          name: 'NasdaqBounce__FoundryDeployment'
+          value: 'gpt-6-luna'
+        }
+        {
+          name: 'NasdaqBounce__EntriesEnabled'
+          value: 'true'
+        }
+        {
+          name: 'NasdaqBounce__MaximumCandleAgeMinutes'
+          value: '35'
+        }
+        {
+          name: 'NasdaqBounce__FoundryTimeoutSeconds'
+          value: '45'
         }
         {
           name: 'OpenApi__DocVersion'
